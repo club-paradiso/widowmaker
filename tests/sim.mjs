@@ -1,0 +1,71 @@
+// 게임 규칙 검사(Node): 결정성, 끝까지 도는지, 전략별 결과 분포.  node tests/sim.mjs
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+import { newGame, act, available, verdict, keepGoing, isMorning, rng } from '../web/js/game.js';
+const pr = rng(12345); // 정책용 난수(게임 난수를 건드리지 않게)
+const story = JSON.parse(readFileSync(new URL('../web/data/story.json', import.meta.url)));
+const storyW = JSON.parse(readFileSync(new URL('../web/data/story_w.json', import.meta.url)));
+const merged = { ...story, ...storyW, lines: { ...story.lines, ...(storyW.lines || {}) }, words: { ...story.words, ...(storyW.words || {}) } };
+
+function play(st, seed, policy, maxSteps = 400) {
+  const s = newGame(st, seed); const acts = [];
+  let steps = 0;
+  while (!s.ended && steps++ < maxSteps) {
+    if (isMorning(s)) { if (s.day < 2 && policy.keep) { keepGoing(s); acts.push(['__keep']); continue; } break; }
+    const av = available(s);
+    const [id, arg] = policy.next(s, av);
+    acts.push([id, arg]);
+    act(s, id, arg);
+    if (id === 'phone') for (const e of s.evidence) if (!e.found) { act(s, 'take', e.id); acts.push(['take', e.id]); }
+  }
+  const v = verdict(s, s.affairs.every((a) => a.confessed) ? 'pledge' : 'divorce');
+  return { s, v, acts };
+}
+const gentle = { keep: false, next(s, av) {
+  if (s.baseline < 2) return ['baseline'];
+  if (!s.phoneOpened) return ['phone'];
+  const ev = s.evidence.find((e) => e.found && !e.used && e.affairId !== null && !s.affairs[e.affairId].confessed);
+  if (ev) return ['evidence', ev.id];
+  if (s.tension > 0 && s.strain > 55) return ['rest'];
+  if (s.confusion > 45) return ['recheck'];
+  return [['push', 'minimize', 'silence', 'cry', 'push'][s.turn % 5]];
+} };
+const brutal = { keep: true, next(s, av) {
+  if (av.includes('tighten')) return ['tighten'];
+  return [['shock', 'slapHard', 'push', 'push'][s.turn % 4]];
+} };
+const random = { keep: true, next(s, av) { const id = av[Math.floor(pr() * av.length)]; if (id === 'evidence') return [id, s.evidence.find((e) => e.found && !e.used).id]; return [id]; } };
+
+// 결정성: 같은 seed + 같은 행동 → 같은 상태
+for (const seed of [1, 42, 999]) {
+  const a = play(story, seed, random); const s2 = newGame(story, seed);
+  for (const [id, arg] of a.acts) id === '__keep' ? keepGoing(s2) : act(s2, id, arg);
+  assert.equal(JSON.stringify(s2.affairs), JSON.stringify(a.s.affairs));
+  assert.equal(s2.hp, a.s.hp);
+}
+console.log('결정성 OK');
+// 모든 대사 키가 대본에 있는지
+const used = new Set();
+for (let seed = 1; seed <= 300; seed++) for (const pol of [gentle, brutal, random]) {
+  const s = newGame(story, seed);
+  let n = 0;
+  while (!s.ended && !isMorning(s) && n++ < 120) {
+    const av = available(s); const [id, arg] = pol.next(s, av);
+    for (const ev of act(s, id, arg)) if (ev.t === 'say') used.add(ev.key);
+  }
+}
+const missing = [...used].filter((k) => !story.lines[k]);
+assert.deepEqual(missing, [], 'missing lines: ' + missing);
+console.log('대사 키', used.size, '개 모두 있음');
+for (const [name, pol] of Object.entries({ gentle, brutal, random })) {
+  const R = { end: {}, ranks: {}, told: 0, N: 0 };
+  for (let seed = 1; seed <= 500; seed++) {
+    const { v } = play(story, seed * 7 + 3, pol);
+    R.end[v.ended || 'verdict'] = (R.end[v.ended || 'verdict'] || 0) + 1;
+    R.ranks[v.rank] = (R.ranks[v.rank] || 0) + 1; R.told += v.told; R.N += v.N;
+  }
+  console.log(name.padEnd(7), '결말', JSON.stringify(R.end), '등급', JSON.stringify(R.ranks), '자백률', (R.told / R.N).toFixed(2));
+}
+// 아내판도 돌아가는지
+const w = play(merged, 5, random); assert.ok(w.v.rank);
+console.log('아내판 OK');
