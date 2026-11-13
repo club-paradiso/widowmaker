@@ -3,10 +3,6 @@
   "ko": "바람핀 남편에게<br>전부 털어놓게 하기",
   "en": "Make Your Cheating Husband<br>Confess Everything"
  },
- "title_w": {
-  "ko": "바람핀 아내에게<br>전부 털어놓게 하기",
-  "en": "Make Your Cheating Wife<br>Confess Everything"
- },
  "kicker": {
   "ko": "진술 청취 · 하룻밤",
   "en": "Statement · one night"
@@ -18,10 +14,6 @@
  "lead": {
   "ko": "들킨 건 한 명. 그는 그게 전부라고 한다. 천장 고리에 손목을 매단 채, 아침이 오기 전에 전부 듣는다.",
   "en": "One name slipped out. He swears that's all. Wrists tied to a ceiling hook — you'll hear everything before morning."
- },
- "lead_w": {
-  "ko": "들킨 건 한 명. 그녀는 그게 전부라고 한다. 천장 고리에 손목을 매단 채, 아침이 오기 전에 전부 듣는다.",
-  "en": "One name slipped out. She swears that's all. Wrists tied to a ceiling hook — you'll hear everything before morning."
  },
  "rule1": {
   "ko": "<b>바람이 한 번뿐이라는 보장은 없다.</b> \"이제 없어\"는 진실일 수도, 거짓일 수도 있다.",
@@ -42,18 +34,6 @@
  "name_ph": {
   "ko": "(비우면 '남편')",
   "en": "(blank = \"husband\")"
- },
- "name_ph_w": {
-  "ko": "(비우면 '아내')",
-  "en": "(blank = \"wife\")"
- },
- "mode_h": {
-  "ko": "남편",
-  "en": "Husband"
- },
- "mode_w": {
-  "ko": "아내",
-  "en": "Wife"
  },
  "vol": {
   "ko": "소리",
@@ -357,36 +337,6 @@
    "en": "Remove his pants"
   }
  },
- "act_w": {
-  "smash": {
-   "ko": "소중한 물건 부수기",
-   "en": "Smash her keepsake"
-  },
-  "mother": {
-   "ko": "장모님께 전화(척)",
-   "en": "Call her mother (fake)"
-  },
-  "sake": {
-   "ko": "술 먹이기",
-   "en": "Make her drink"
-  },
-  "leave": {
-   "ko": "내버려 두기",
-   "en": "Leave her"
-  },
-  "askWhy": {
-   "ko": "그 사람 어디가 좋았어?",
-   "en": "What did you see in him?"
-  },
-  "stripTop": {
-   "ko": "상의 벗기기",
-   "en": "Remove her top"
-  },
-  "stripBottom": {
-   "ko": "하의 벗기기",
-   "en": "Remove her pants"
-  }
- },
  "pickEv": {
   "ko": "어떤 증거를 내밀까?",
   "en": "Which evidence?"
@@ -603,28 +553,6 @@
   "ko": "{n}만 원",
   "en": "₩{n}0,000"
  },
- "resText_w": {
-  "all": {
-   "ko": "그녀는 정말 전부 털어놓았다. {N}명.",
-   "en": "She really did confess everything. {N} of them."
-  },
-  "some": {
-   "ko": "들은 건 {N}명 중 {told}명. 나머지는 끝까지 말하지 않았다.",
-   "en": "You heard {told} of {N}. She kept the rest to herself."
-  },
-  "escaped": {
-   "ko": "그녀는 도망쳤고, 나는 고소당했다.",
-   "en": "She got away. And she pressed charges."
-  }
- },
- "perfect_w": {
-  "ko": "손 하나 대지 않고 전부 받아냈다. 이 방의 주인은 당신이었다.",
-  "en": "Everything, without laying a hand on her. You owned the room."
- },
- "v_pledge_w": {
-  "ko": "각서를 받고 넘어간다",
-  "en": "Make her sign a pledge"
- },
  "epiSkip": {
   "ko": "건너뛰기 ▶",
   "en": "Skip ▶"
@@ -644,9 +572,5 @@
  "bottomOff": {
   "ko": "하의 없음",
   "en": "No pants"
- },
- "who": {
-  "ko": "바람핀 쪽",
-  "en": "Who cheated"
  }
 }

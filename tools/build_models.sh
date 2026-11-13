@@ -20,11 +20,3 @@ python3 -I tools/build_human.py --mpfb "$MPFB_DATA" --assets "$S" --faceunits "$
 python3 -I tools/build_human.py --mpfb "$MPFB_DATA" --assets "$S" --out work/wife_raw.glb --arms-only \
   --sex female --race asian:0.55,caucasian:0.45 --skin "$S/skins/young_asian_female/young_asian_female.mhmat" \
   --proxy clothes female_casualsuit01 -
-# 아내가 바람핀 판(mode w): 묶인 쪽은 아내 전신, 1인칭 팔은 남편
-python3 -I tools/build_human.py --mpfb "$MPFB_DATA" --assets "$S" --faceunits "$FACEUNITS" --out work/spouse_f_raw.glb \
-  --sex female --race asian:0.55,caucasian:0.45 --muscle 0.2 --age-morph --target chin/chin-width-decr=0.2 --target eyes/l-eye-scale-incr=0.15 --target eyes/r-eye-scale-incr=0.15 --skin "$S/skins/young_asian_female/young_asian_female.mhmat" \
-  --proxy clothes female_casualsuit01 - --proxy hair bob02 - --proxy eyebrows eyebrow009 - --proxy eyelashes eyelashes02 - \
-  --proxy eyes high-poly "$S/eyes/materials/brown.mhmat" --proxy teeth teeth_base - --proxy tongue tongue01 - --proxy clothes shoes06 -
-python3 -I tools/build_human.py --mpfb "$MPFB_DATA" --assets "$S" --out work/hands_m_raw.glb --arms-only \
-  --sex male --race asian:0.55,caucasian:0.45 --skin "$S/skins/young_asian_male/young_asian_male.mhmat" \
-  --proxy clothes male_casualsuit01 -

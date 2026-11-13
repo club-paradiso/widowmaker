@@ -4,8 +4,6 @@ import assert from 'node:assert/strict';
 import { newGame, act, available, verdict, keepGoing, isMorning, rng } from '../web/js/game.js';
 const pr = rng(12345); // 정책용 난수(게임 난수를 건드리지 않게)
 const story = JSON.parse(readFileSync(new URL('../web/data/story.json', import.meta.url)));
-const storyW = JSON.parse(readFileSync(new URL('../web/data/story_w.json', import.meta.url)));
-const merged = { ...story, ...storyW, lines: { ...story.lines, ...(storyW.lines || {}) }, words: { ...story.words, ...(storyW.words || {}) } };
 
 function play(st, seed, policy, maxSteps = 400) {
   const s = newGame(st, seed, { age: 20 + (seed % 30) }); const acts = [];
@@ -66,9 +64,6 @@ for (const [name, pol] of Object.entries({ gentle, brutal, random })) {
   }
   console.log(name.padEnd(7), '결말', JSON.stringify(R.end), '등급', JSON.stringify(R.ranks), '자백률', (R.told / R.N).toFixed(2));
 }
-// 아내판도 돌아가는지
-const w = play(merged, 5, random); assert.ok(w.v.rank);
-console.log('아내판 OK');
 // 평소 질문의 대답은 a(답 id)를 넘겨야 대사가 비지 않는다
 { const s = newGame(story, 3); const ev = act(s, 'baseline').find((e) => e.key === 'baseline_a'); assert.ok(ev.vars.a, 'baseline_a 에 a 없음'); console.log('평소 질문 대답 OK'); }
 // 옷 벗기기: 한 번씩만, 속옷은 상태에 없음(늘 남음). 나이가 많을수록 시작 체력이 낮고 어깨 부담이 빨리 쌓인다

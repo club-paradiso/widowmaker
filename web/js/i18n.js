@@ -1,4 +1,4 @@
-// 말 바꾸기(한국어·English). UI 문구는 data/ui.json, 대본은 data/story.json(아내판은 story_w.json 이 덮어씀).
+// 말 바꾸기(한국어·English). UI 문구는 data/ui.json, 대본은 data/story.json.
 // 문장 틀: {x} 는 vars 의 값(낱말 id 면 words 에서 찾음), {x^} 영어 첫 글자 대문자, {x|A/B} 앞말 받침 있으면 A·없으면 B.
 import { vq } from './version.js';
 
@@ -19,10 +19,8 @@ export function pickLang() {
   const l = q || store.get('wm_lang') || ((navigator.language || 'ko').startsWith('ko') ? 'ko' : 'en');
   return l in LANGS ? l : 'ko';
 }
-export function pickMode() {
-  const q = new URLSearchParams(location.search).get('mode') || store.get('wm_mode');
-  return q === 'w' ? 'w' : 'h';
-}
+// 바람핀 쪽은 늘 남편, 주인공(1인칭)은 늘 아내다. 예전 저장의 mode 값은 무시한다
+export function pickMode() { return 'h'; }
 
 function merge(a, b) { // b 가 a 를 덮음(객체는 깊이)
   if (!b || typeof b !== 'object' || Array.isArray(b)) return b === undefined ? a : b;
@@ -33,11 +31,11 @@ function merge(a, b) { // b 가 a 를 덮음(객체는 깊이)
 
 export async function load(l = pickLang(), m = pickMode()) {
   lang = l; mode = m;
-  store.set('wm_lang', l); store.set('wm_mode', m);
+  store.set('wm_lang', l);
   document.documentElement.lang = l;
   const get = (u) => fetch(vq(u)).then((r) => (r.ok ? r.json() : {}));
-  const [u, s, sw] = await Promise.all([get('./data/ui.json'), get('./data/story.json'), m === 'w' ? get('./data/story_w.json') : Promise.resolve(null)]);
-  ui = u; story = sw ? merge(s, sw) : s;
+  const [u, s] = await Promise.all([get('./data/ui.json'), get('./data/story.json')]);
+  ui = u; story = s;
   return story;
 }
 export const setName = (n) => { name = (n || '').trim(); };
@@ -90,12 +88,6 @@ export function fill(str, vars = {}) {
 export function t(key, vars = {}) {
   let o = ui;
   for (const p of key.split('.')) o = o?.[p];
-  if (mode === 'w') { // 아내판 문구가 따로 있으면 그쪽
-    let w = ui; const ks = key.split('.'); ks[0] = ks[0] + '_w';
-    for (const p of ks) w = w?.[p];
-    if (w) o = w;
-    if (!w && ks.length === 1 && ui[key + '_w']) o = ui[key + '_w'];
-  }
   if (o === undefined) return key;
   return fill(L(o), vars);
 }

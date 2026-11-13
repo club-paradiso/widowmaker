@@ -12,6 +12,14 @@ function canvasTex(w, h, draw, repeat = [1, 1]) {
 }
 const rnd = (() => { let a = 7; return () => ((a = (a * 16807) % 2147483647) / 2147483647); })();
 
+// 사진 질감(Higgsfield 로 만든 webp)이 있으면 캔버스 질감을 바꿔 끼운다. 없으면 캔버스 그대로
+function photoTex(url, mat, repeat, key = 'map') {
+  new THREE.TextureLoader().load(url, (t) => {
+    t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); t.anisotropy = 8;
+    mat[key] = t; mat.needsUpdate = true;
+  }, undefined, () => {});
+}
+
 export function makeRoom(scene) {
   const R = { group: new THREE.Group(), lights: {} };
   scene.add(R.group);
@@ -34,6 +42,7 @@ export function makeRoom(scene) {
   }, [2.5, 2.5]);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.62 }));
   floor.rotation.x = -Math.PI / 2; floor.position.z = cz; floor.receiveShadow = true; R.group.add(floor);
+  photoTex('./assets/floor.webp', floor.material, [3.4, 3.8]);
   // 벽지: 따뜻한 회색, 아주 옅은 세로 무늬
   const wallTex = canvasTex(512, 512, (g, w, h) => {
     g.fillStyle = '#b8aa98'; g.fillRect(0, 0, w, h);
@@ -41,6 +50,7 @@ export function makeRoom(scene) {
     for (let k = 0; k < 4000; k++) { g.fillStyle = `rgba(0,0,0,${rnd() * 0.04})`; g.fillRect(rnd() * w, rnd() * h, 1, 1); }
   }, [3, 1.5]);
   const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.92 });
+  photoTex('./assets/wall.webp', wallMat, [3, 1.7]);
   const wall = (w, x, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, H), wallMat); m.position.set(x, H / 2, z); m.rotation.y = ry; m.receiveShadow = true; R.group.add(m); return m; };
   wall(W, 0, cz - D / 2, 0); wall(W, 0, cz + D / 2, Math.PI); wall(D, -W / 2, cz, Math.PI / 2); wall(D, W / 2, cz, -Math.PI / 2);
   // 걸레받이
@@ -64,13 +74,16 @@ export function makeRoom(scene) {
   });
   const win = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.25), new THREE.MeshBasicMaterial({ map: nightTex }));
   win.position.set(-1.05, 1.45, cz - D / 2 + 0.01); R.group.add(win); R.window = win; R.nightTex = nightTex;
+  let nightPhoto = null, morningPhoto = null;
+  new THREE.TextureLoader().load('./assets/night.webp', (t) => { t.colorSpace = THREE.SRGBColorSpace; nightPhoto = t; if (!R.isMorning) { win.material.map = t; win.material.needsUpdate = true; } }, undefined, () => {});
+  new THREE.TextureLoader().load('./assets/morning.webp', (t) => { t.colorSpace = THREE.SRGBColorSpace; morningPhoto = t; }, undefined, () => {});
   const frameM = new THREE.MeshStandardMaterial({ color: 0xe8e4dc, roughness: 0.5 });
   for (const [w, h, x, y] of [[1.38, 0.05, 0, 0.64], [1.38, 0.05, 0, -0.64], [0.05, 1.3, -0.67, 0], [0.05, 1.3, 0.67, 0], [0.035, 1.25, 0, 0]]) {
     const f = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.05), frameM); f.position.set(-1.05 + x, 1.45 + y, cz - D / 2 + 0.025); R.group.add(f);
   }
   // 커튼(반쯤 닫힘)
   const curtainTex = canvasTex(256, 256, (g, w, h) => { for (let x = 0; x < w; x++) { const v = 105 + 30 * Math.sin(x * 0.19) + 10 * Math.sin(x * 0.53); g.fillStyle = `rgb(${v * 0.7},${v * 0.55},${v * 0.48})`; g.fillRect(x, 0, 1, h); } });
-  const curtain = (x) => { const c = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 1.95, 24, 1), new THREE.MeshStandardMaterial({ map: curtainTex, roughness: 1, side: THREE.DoubleSide })); const p = c.geometry.attributes.position; for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin(p.getX(i) * 28) * 0.03); c.geometry.computeVertexNormals(); c.position.set(x, 1.32, cz - D / 2 + 0.09); c.castShadow = true; R.group.add(c); };
+  const curtain = (x) => { const cm = new THREE.MeshStandardMaterial({ map: curtainTex, roughness: 1, side: THREE.DoubleSide }); const c = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 1.95, 24, 1), cm); const p = c.geometry.attributes.position; for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin(p.getX(i) * 28) * 0.03); c.geometry.computeVertexNormals(); c.position.set(x, 1.32, cz - D / 2 + 0.09); c.castShadow = true; R.group.add(c); };
   curtain(-1.62); curtain(-0.62);
   const moon = new THREE.DirectionalLight(0x6f8fd0, 0.25); moon.position.set(-1.0, 1.8, cz - D / 2 - 1); moon.target.position.set(0, 0, 0.5); R.group.add(moon, moon.target); R.lights.moon = moon;
 
@@ -140,7 +153,10 @@ export function makeRoom(scene) {
     moon.color.set(on ? 0xfff0d8 : 0x6f8fd0); moon.intensity = on ? 2.6 : 0.25; moon.castShadow = on;
     amb.intensity = on ? 0.9 : 0.25; amb.color.set(on ? 0xe8eef8 : 0x8a7a6a);
     fill.intensity = on ? 0.6 : 1.6;
-    if (on) { win.material.map = canvasTex(256, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#cfe3f5'); gr.addColorStop(1, '#f6ecd8'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }); }
+    R.isMorning = on;
+    if (on && morningPhoto) win.material.map = morningPhoto;
+    else if (!on && nightPhoto) win.material.map = nightPhoto;
+    else if (on) { win.material.map = canvasTex(256, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#cfe3f5'); gr.addColorStop(1, '#f6ecd8'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }); }
     else win.material.map = nightTex;
     win.material.needsUpdate = true;
   };
