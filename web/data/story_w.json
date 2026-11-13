@@ -1,0 +1,455 @@
+{
+ "_note": "아내가 바람핀 판(mode w). story.json 위에 덮어쓴다(여기 없는 것은 story.json 그대로).",
+ "who": {
+  "h": {
+   "ko": "아내",
+   "en": "Wife"
+  }
+ },
+ "pron": {
+  "ko": {
+   "S": "아내",
+   "s": "아내"
+  },
+  "en": {
+   "S": "Wife",
+   "s": "wife",
+   "he": "she",
+   "He": "She",
+   "him": "her",
+   "his": "her"
+  }
+ },
+ "trigger": {
+  "partner": {
+   "id": "p_app",
+   "depth": 1
+  },
+  "whens": [
+   "w_lastmonth",
+   "w_3months"
+  ],
+  "evidence": {
+   "name": {
+    "ko": "메신저 알림",
+    "en": "Message preview"
+   },
+   "desc": {
+    "ko": "도윤: \"어제 고마웠어요ㅎㅎ 또 봐요\"",
+    "en": "Doyun: \"Thanks for last night :) see you again?\""
+   },
+   "strength": 1,
+   "app": "messenger"
+  }
+ },
+ "words": {
+  "p_app": {
+   "ko": "앱에서 만난 도윤",
+   "en": "Doyun, from the dating app"
+  },
+  "p_gym": {
+   "ko": "필라테스 강사",
+   "en": "my Pilates instructor"
+  },
+  "p_client": {
+   "ko": "거래처 과장",
+   "en": "a manager at a client company"
+  },
+  "p_bar": {
+   "ko": "와인바 사장",
+   "en": "the owner of the wine bar"
+  },
+  "p_junior": {
+   "ko": "회사 후배 민준",
+   "en": "Minjun, a junior at work"
+  },
+  "p_classmate": {
+   "ko": "대학 동기",
+   "en": "a guy from my college class"
+  },
+  "p_club": {
+   "ko": "독서 모임 사람",
+   "en": "someone from my book club"
+  },
+  "p_neighbor": {
+   "ko": "옆집 남자",
+   "en": "the man next door"
+  },
+  "p_ex": {
+   "ko": "전 남자친구",
+   "en": "my ex-boyfriend"
+  },
+  "p_friend": {
+   "ko": "네 친구 성호",
+   "en": "your friend Sungho"
+  },
+  "w_inlaws": {
+   "ko": "네가 본가 갔을 때",
+   "en": "when you were at your parents'"
+  },
+  "pl_herhome": {
+   "ko": "그 사람 집",
+   "en": "his place"
+  }
+ },
+ "evidence": {
+  "real": [
+   {
+    "name": {
+     "ko": "모텔 결제 내역",
+     "en": "Motel charge"
+    },
+    "desc": {
+     "ko": "카드 승인 · ○○모텔 · 새벽 1:12 · 45,000원",
+     "en": "Card approved · motel · 1:12 AM · ₩45,000"
+    },
+    "strength": 3,
+    "app": "card"
+   },
+   {
+    "name": {
+     "ko": "숨김 앨범 사진",
+     "en": "Hidden album photo"
+    },
+    "desc": {
+     "ko": "팔짱 낀 셀카. 날짜가 결혼 후다",
+     "en": "A selfie, arm in arm. Dated after the wedding."
+    },
+    "strength": 3,
+    "app": "gallery"
+   },
+   {
+    "name": {
+     "ko": "보관된 대화방",
+     "en": "Archived chat"
+    },
+    "desc": {
+     "ko": "\"오늘 남편 늦게 와. 우리 집 올래?\"",
+     "en": "\"Husband's home late tonight. Wanna come over?\""
+    },
+    "strength": 2,
+    "app": "messenger"
+   },
+   {
+    "name": {
+     "ko": "위치 기록",
+     "en": "Location history"
+    },
+    "desc": {
+     "ko": "'야근'이라던 밤, 같은 오피스텔에 4시간",
+     "en": "On a \"late night at work\", four hours at one apartment block"
+    },
+    "strength": 2,
+    "app": "maps"
+   },
+   {
+    "name": {
+     "ko": "선물 결제",
+     "en": "Gift purchase"
+    },
+    "desc": {
+     "ko": "남성 시계 239,000원. 나는 받은 적 없다",
+     "en": "Men's watch, ₩239,000. I never got one."
+    },
+    "strength": 2,
+    "app": "card"
+   },
+   {
+    "name": {
+     "ko": "새벽 통화 기록",
+     "en": "2 AM call log"
+    },
+    "desc": {
+     "ko": "저장 안 된 번호 · 새벽 2:03 · 41분",
+     "en": "Unsaved number · 2:03 AM · 41 min"
+    },
+    "strength": 1,
+    "app": "calls"
+   },
+   {
+    "name": {
+     "ko": "기념일 메모",
+     "en": "Anniversary note"
+    },
+    "desc": {
+     "ko": "\"M 100일 — 케이크 예약\"",
+     "en": "\"M, 100 days — order cake\""
+    },
+    "strength": 1,
+    "app": "memo"
+   },
+   {
+    "name": {
+     "ko": "이상한 일정",
+     "en": "Odd calendar entries"
+    },
+    "desc": {
+     "ko": "매주 목요일 '동창 모임'. 모임은 없었다",
+     "en": "\"Alumni dinner\" every Thursday. There were none."
+    },
+    "strength": 1,
+    "app": "calendar"
+   }
+  ],
+  "decoy": [
+   {
+    "name": {
+     "ko": "모르는 번호의 문자",
+     "en": "Text from unknown number"
+    },
+    "desc": {
+     "ko": "\"누나 보고싶어♡ 사진 보내줄게\"",
+     "en": "\"miss u babe ♡ want pics?\""
+    },
+    "strength": 1,
+    "app": "messenger",
+    "excuse": {
+     "ko": "그거 스팸이야! 링크 눌러 봐, 도박 사이트 나와.",
+     "en": "That's spam! Tap the link — it's a gambling site."
+    }
+   },
+   {
+    "name": {
+     "ko": "호텔 결제",
+     "en": "Hotel charge"
+    },
+    "desc": {
+     "ko": "△△호텔 · 2박",
+     "en": "Hotel · 2 nights"
+    },
+    "strength": 2,
+    "app": "card",
+    "excuse": {
+     "ko": "워크숍이었어. 법인카드가 안 돼서 내 걸로 긁고 정산받았어. 메일 있어.",
+     "en": "The team workshop. Corporate card failed, I paid and got reimbursed. The email's there."
+    }
+   },
+   {
+    "name": {
+     "ko": "남자와 찍은 사진",
+     "en": "Photo with a man"
+    },
+    "desc": {
+     "ko": "정장 차림으로 웃는 둘",
+     "en": "The two of them, smiling, dressed up"
+    },
+    "strength": 2,
+    "app": "gallery",
+    "excuse": {
+     "ko": "사촌 오빠 결혼식이잖아… 너 그날 출장이었던 거.",
+     "en": "That's my cousin's wedding… the one you missed for work."
+    }
+   },
+   {
+    "name": {
+     "ko": "낯선 동네 방문",
+     "en": "Visit to a strange neighborhood"
+    },
+    "desc": {
+     "ko": "토요일 오후, 처음 보는 동네에 30분",
+     "en": "Saturday afternoon, 30 min somewhere new"
+    },
+    "strength": 1,
+    "app": "maps",
+    "excuse": {
+     "ko": "중고로 유모차 보러 간 거야… 언니 주려고. 거래 채팅 봐.",
+     "en": "Looking at a used stroller… for my sister. Check the chat."
+    }
+   },
+   {
+    "name": {
+     "ko": "밤 11시 통화",
+     "en": "11 PM call"
+    },
+    "desc": {
+     "ko": "'지영' · 밤 11:20 · 52분",
+     "en": "\"Jiyoung\" · 11:20 PM · 52 min"
+    },
+    "strength": 1,
+    "app": "calls",
+    "excuse": {
+     "ko": "지영이 이혼 얘기 들어준 거야. 걔 요즘 진짜 힘들어.",
+     "en": "Jiyoung was talking about her divorce. She's in a bad place."
+    }
+   }
+  ]
+ },
+ "treasure": {
+  "ko": "결혼할 때 어머님께 받은 반지",
+  "en": "the ring your mother gave you at our wedding"
+ },
+ "lines": {
+  "intro": {
+   "ko": [
+    "오늘 밤 열 시. 그녀의 폰에 알림이 떴다.",
+    "{ev0}",
+    "그녀가 샤워하는 동안, 나는 준비를 마쳤다."
+   ],
+   "en": [
+    "Ten tonight. A notification lit up her phone.",
+    "{ev0}",
+    "While she showered, I got everything ready."
+   ]
+  },
+  "w_why": {
+   "ko": [
+    "{partner}, 그 사람 어디가 그렇게 좋았어?"
+   ],
+   "en": [
+    "{partner^}. What was so great about him?"
+   ]
+  },
+  "why_slip": {
+   "ko": [
+    "그 사람은… 너처럼 따지지 않았어. {partner}{partner|도/도}… 아, 아니, 그게…"
+   ],
+   "en": [
+    "He didn't… interrogate me like you. Neither did {partner}… no, wait, I mean…"
+   ]
+  },
+  "w_tools": {
+   "ko": [
+    "공구함을 그녀의 발 앞에 열어 둔다."
+   ],
+   "en": [
+    "I set the toolbox open at her feet."
+   ]
+  },
+  "w_divorce": {
+   "ko": [
+    "이혼 서류를 그녀의 눈앞에 들어 보인다. 도장 찍을 칸만 비었다."
+   ],
+   "en": [
+    "I hold the divorce papers in front of her. Only the signature is missing."
+   ]
+  },
+  "w_mother": {
+   "ko": [
+    "장모님, 늦게 죄송해요. 따님 일로 여쭐 게 있어서요…",
+    "(통화하는 척 폰을 귀에 댄다)"
+   ],
+   "en": [
+    "Mother? Sorry it's late. It's about your daughter…",
+    "(I put the phone to my ear, pretending.)"
+   ]
+  },
+  "w_cry_n": {
+   "ko": [
+    "참았던 눈물이 터졌다. 그녀도 그걸 봤다."
+   ],
+   "en": [
+    "The tears I'd held back came. She saw it."
+   ]
+  },
+  "smash_h": {
+   "ko": [
+    "안 돼…! 그건… 그건 엄마가…"
+   ],
+   "en": [
+    "No…! That was… my mother's…"
+   ]
+  },
+  "rest_n": {
+   "ko": [
+    "줄을 늦춰 팔을 내려 준다. 그녀가 길게 숨을 쉰다."
+   ],
+   "en": [
+    "I let the rope down so her arms can drop. She breathes out, long."
+   ]
+  },
+  "feed_h": {
+   "ko": [
+    "…고마워.",
+    "(허겁지겁 삼킨다)"
+   ],
+   "en": [
+    "…Thanks.",
+    "(She gulps it down.)"
+   ]
+  },
+  "leave_n": {
+   "ko": [
+    "불을 끄고 방을 나온다. 그녀를 매달아 둔 채로."
+   ],
+   "en": [
+    "I turn off the light and leave. She stays hanging there."
+   ]
+  },
+  "warn_1": {
+   "ko": [
+    "그녀의 숨이 이상하게 얕다."
+   ],
+   "en": [
+    "Her breathing has gone strangely shallow."
+   ]
+  },
+  "newday": {
+   "ko": [
+    "회사에 '열이 나서 쉰다'고 전화했다. {day}일째 밤."
+   ],
+   "en": [
+    "I called her office: \"She's got a fever.\" Night {day}."
+   ]
+  },
+  "end_dead": {
+   "ko": [
+    "그녀가 더는 숨을 쉬지 않는다.",
+    "…초인종이 울린다. 경찰이다."
+   ],
+   "en": [
+    "She's stopped breathing.",
+    "…The doorbell. Police."
+   ]
+  },
+  "end_escaped": {
+   "ko": [
+    "늦춰 둔 줄이 풀렸다. 그녀가 나를 밀치고 맨발로 뛰쳐나갔다."
+   ],
+   "en": [
+    "The slack rope slipped. She shoved past me and ran out barefoot."
+   ]
+  },
+  "epi_warm": {
+   "ko": [
+    "한 달 뒤. 아침 식탁.",
+    "그녀는 먼저 일어나 국을 데운다. 폰은 늘 화면을 위로 해서 식탁에 둔다.",
+    "w:…오늘 몇 시에 와?",
+    "h:일곱 시. 약속 없어. 와서 같이 먹자."
+   ],
+   "en": [
+    "A month later. Breakfast.",
+    "She's up first, warming the soup. Her phone always sits face-up on the table now.",
+    "w:…What time are you home?",
+    "h:Seven. No plans. Let's eat together."
+   ]
+  },
+  "epi_cold": {
+   "ko": [
+    "한 달 뒤. 아침 식탁.",
+    "그녀는 내 쪽을 보지 않는다. 수저 소리만 난다.",
+    "뺨의 멍은 다 빠졌다. 다른 건 아직이다.",
+    "h:…다녀올게."
+   ],
+   "en": [
+    "A month later. Breakfast.",
+    "She won't look my way. Only the clink of spoons.",
+    "The bruises on her face have faded. Nothing else has.",
+    "h:…I'm off."
+   ]
+  },
+  "epi_phone": {
+   "ko": [
+    "한 달 뒤. 아침 식탁.",
+    "식탁 위에서 그녀의 폰이 짧게 떨린다. 그녀가 재빨리 뒤집어 놓는다.",
+    "h:…스팸이야.",
+    "나는 아무 말 없이 국을 떠먹는다. 다 들은 게 아니었다."
+   ],
+   "en": [
+    "A month later. Breakfast.",
+    "Her phone buzzes once on the table. She flips it face-down, fast.",
+    "h:…Spam.",
+    "I eat my soup and say nothing. I hadn't heard it all."
+   ]
+  }
+ }
+}

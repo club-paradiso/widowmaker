@@ -1,0 +1,231 @@
+{
+ "_note": "표정과 거짓말 버릇. keys 는 ARKit 이름과 0~1 값, gaze 는 시선 [좌우, 상하](도, +는 본인의 왼쪽·위). 값은 설계 판단(스크린샷으로 확인).",
+ "faces": {
+  "neutral": {
+   "keys": {}
+  },
+  "calm": {
+   "keys": {
+    "mouthSmileLeft": 0.08,
+    "mouthSmileRight": 0.08,
+    "browInnerUp": 0.05
+   }
+  },
+  "nervous": {
+   "keys": {
+    "browInnerUp": 0.35,
+    "mouthPressLeft": 0.2,
+    "mouthPressRight": 0.2,
+    "eyeWideLeft": 0.1,
+    "eyeWideRight": 0.1
+   },
+   "gaze": [
+    0,
+    -4
+   ]
+  },
+  "afraid": {
+   "keys": {
+    "browInnerUp": 0.75,
+    "browOuterUpLeft": 0.3,
+    "browOuterUpRight": 0.3,
+    "eyeWideLeft": 0.55,
+    "eyeWideRight": 0.55,
+    "mouthStretchLeft": 0.3,
+    "mouthStretchRight": 0.3,
+    "jawOpen": 0.08
+   }
+  },
+  "pained": {
+   "keys": {
+    "browDownLeft": 0.55,
+    "browDownRight": 0.55,
+    "browInnerUp": 0.4,
+    "eyeSquintLeft": 0.6,
+    "eyeSquintRight": 0.6,
+    "cheekSquintLeft": 0.4,
+    "cheekSquintRight": 0.4,
+    "noseSneerLeft": 0.35,
+    "noseSneerRight": 0.35,
+    "mouthStretchLeft": 0.35,
+    "mouthStretchRight": 0.35,
+    "jawOpen": 0.12
+   }
+  },
+  "crying": {
+   "keys": {
+    "browInnerUp": 0.9,
+    "mouthFrownLeft": 0.6,
+    "mouthFrownRight": 0.6,
+    "eyeSquintLeft": 0.45,
+    "eyeSquintRight": 0.45,
+    "mouthShrugLower": 0.4,
+    "mouthPressLeft": 0.2,
+    "mouthPressRight": 0.2
+   },
+   "gaze": [
+    0,
+    -10
+   ]
+  },
+  "angry": {
+   "keys": {
+    "browDownLeft": 0.7,
+    "browDownRight": 0.7,
+    "noseSneerLeft": 0.3,
+    "noseSneerRight": 0.3,
+    "mouthPressLeft": 0.4,
+    "mouthPressRight": 0.4,
+    "eyeSquintLeft": 0.25,
+    "eyeSquintRight": 0.25
+   }
+  },
+  "smug": {
+   "keys": {
+    "mouthSmileLeft": 0.35,
+    "mouthSmileRight": 0.1,
+    "browOuterUpLeft": 0.2,
+    "eyeSquintLeft": 0.15,
+    "eyeSquintRight": 0.15
+   }
+  },
+  "ashamed": {
+   "keys": {
+    "browInnerUp": 0.5,
+    "mouthFrownLeft": 0.3,
+    "mouthFrownRight": 0.3,
+    "mouthRollLower": 0.2
+   },
+   "gaze": [
+    -8,
+    -14
+   ]
+  },
+  "exhausted": {
+   "keys": {
+    "eyeBlinkLeft": 0.38,
+    "eyeBlinkRight": 0.42,
+    "jawOpen": 0.14,
+    "mouthFrownLeft": 0.2,
+    "mouthFrownRight": 0.2,
+    "browInnerUp": 0.2
+   },
+   "gaze": [
+    0,
+    -12
+   ]
+  },
+  "drunk": {
+   "keys": {
+    "eyeBlinkLeft": 0.3,
+    "eyeBlinkRight": 0.25,
+    "mouthSmileLeft": 0.25,
+    "mouthSmileRight": 0.3,
+    "jawOpen": 0.06,
+    "browOuterUpRight": 0.2
+   }
+  },
+  "relieved": {
+   "keys": {
+    "browInnerUp": 0.3,
+    "mouthSmileLeft": 0.15,
+    "mouthSmileRight": 0.15,
+    "eyeSquintLeft": 0.1,
+    "eyeSquintRight": 0.1
+   }
+  },
+  "hurt_reflex": {
+   "keys": {
+    "eyeBlinkLeft": 1,
+    "eyeBlinkRight": 0.9,
+    "eyeSquintLeft": 0.8,
+    "eyeSquintRight": 0.6,
+    "browDownLeft": 0.7,
+    "browDownRight": 0.5,
+    "cheekSquintLeft": 0.7,
+    "cheekSquintRight": 0.4,
+    "noseSneerLeft": 0.5,
+    "noseSneerRight": 0.3,
+    "mouthStretchLeft": 0.45,
+    "mouthStretchRight": 0.25,
+    "jawOpen": 0.1
+   }
+  }
+ },
+ "tells": {
+  "lip_press": {
+   "label": {
+    "ko": "입술을 꾹 다문다",
+    "en": "{he} presses {his} lips together"
+   },
+   "keys": {
+    "mouthPressLeft": 0.85,
+    "mouthPressRight": 0.85,
+    "mouthRollLower": 0.35,
+    "mouthRollUpper": 0.25
+   }
+  },
+  "half_smile": {
+   "label": {
+    "ko": "한쪽 입꼬리만 올라간다",
+    "en": "one corner of {his} mouth twitches up"
+   },
+   "keys": {
+    "mouthSmileLeft": 0.7,
+    "mouthDimpleLeft": 0.4,
+    "cheekSquintLeft": 0.25
+   }
+  },
+  "gaze_drop": {
+   "label": {
+    "ko": "눈이 오른쪽 아래로 빠진다",
+    "en": "{his} eyes slide down and away"
+   },
+   "keys": {},
+   "gaze": [
+    -22,
+    -18
+   ]
+  },
+  "blink_burst": {
+   "label": {
+    "ko": "눈을 연달아 깜빡인다",
+    "en": "{he} blinks in a quick burst"
+   },
+   "keys": {}
+  },
+  "brow_flash": {
+   "label": {
+    "ko": "눈썹 안쪽이 순간 치솟는다",
+    "en": "{his} inner brows flick up"
+   },
+   "keys": {
+    "browInnerUp": 0.95,
+    "eyeWideLeft": 0.35,
+    "eyeWideRight": 0.35
+   }
+  },
+  "lip_roll": {
+   "label": {
+    "ko": "아랫입술을 말아 넣는다",
+    "en": "{he} rolls {his} lower lip in"
+   },
+   "keys": {
+    "mouthRollLower": 0.9,
+    "mouthShrugUpper": 0.3,
+    "jawForward": 0.1
+   }
+  },
+  "cheek_puff": {
+   "label": {
+    "ko": "볼을 부풀렸다 숨을 내쉰다",
+    "en": "{he} puffs {his} cheeks and exhales"
+   },
+   "keys": {
+    "cheekPuff": 0.75,
+    "mouthPucker": 0.3,
+    "mouthClose": 0.3
+   }
+  }
+ }
+}

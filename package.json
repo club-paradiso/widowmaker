@@ -1,0 +1,11 @@
+{
+  "name": "widowmaker",
+  "private": true,
+  "type": "module",
+  "description": "브라우저 3D 심문 게임(한국어·English). 정적 사이트: web/",
+  "scripts": {
+    "test": "node tests/sim.mjs",
+    "serve": "python3 -m http.server 8765 --directory web",
+    "bump": "node tools/bump_version.mjs"
+  }
+}
