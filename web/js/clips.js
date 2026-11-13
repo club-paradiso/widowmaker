@@ -172,6 +172,44 @@ export function makeClips(X) {
     l: [{ t: 0.7, p: [-0.035, -0.03, 0.11], g: [0, 1, 0.1], n: N.toMe, curl: 0.4 }, { t: 2.0, p: [-0.03, -0.05, 0.12], g: [0, 1, 0.1], n: N.toMe, curl: 0.45 }, { t: 2.6, p: [-0.26, -0.55, 0.15], g: G.down, n: N.right }],
     ev: [{ t: 0.6, fn: SFX.sob }, { t: 1.4, fn: SFX.sob }],
   });
+  // 상의: 가위로 목깃부터 잘라 낸다(손이 묶여 있어 머리로는 못 벗긴다)
+  C.stripTop = () => {
+    const chest = (dy) => () => { const v = H.point('neck_01'); v.y += dy; return v; };
+    return {
+      view: 'chest', dur: 3.0,
+      r: [
+        { t: 0.4, at: chest(-0.02), p: [0.03, 0, -0.12], g: [0, -1, 0.3], n: N.left, curl: 0.7 },
+        { t: 1.6, at: chest(-0.3), p: [0.03, 0, -0.16], g: [0, -1, 0.3], n: N.left, curl: 0.7 },
+        { t: 2.2, at: chest(-0.3), p: [0.12, 0, -0.25], g: [0, -0.5, 1], n: N.left, curl: 0.7 },
+        { t: 3.0, p: [0.26, -0.55, 0.15], g: G.down, n: N.left },
+      ],
+      l: [
+        { t: 0.5, at: chest(-0.08), p: [-0.06, 0, -0.14], g: [0, -0.4, 1], n: N.right, curl: 0.85 },
+        { t: 1.8, at: chest(-0.2), p: [-0.06, 0, -0.16], g: [0, -0.4, 1], n: N.right, curl: 0.85 },
+        { t: 2.4, at: chest(-0.2), p: [-0.2, -0.05, -0.25], g: [-0.3, -0.4, 1], n: N.right, curl: 0.9 },
+        { t: 3.0, p: [-0.26, -0.55, 0.15], g: G.down, n: N.right },
+      ],
+      ev: [{ t: 0, fn: () => hold('r', P.scissors()) }, { t: 0.5, fn: SFX.snip }, { t: 1.4, fn: SFX.snip }, { t: 2.3, fn: () => { X.setClothes({ top: false }); SFX.cloth(); H.setExpr('ashamed'); H.react('flinch', 0.5); } }, { t: 2.8, fn: () => drop('r') }],
+    };
+  };
+  // 하의: 허리에서 무릎까지 끌어내린다(신발도)
+  C.stripBottom = () => {
+    const hip = (dy) => () => { const v = H.point('pelvis'); v.y += dy; return v; };
+    return {
+      view: 'low2', dur: 2.6,
+      r: [
+        { t: 0.4, at: hip(0.08), p: [0.13, 0, -0.1], g: [0, -1, 0.2], n: N.left, curl: 0.85 },
+        { t: 1.6, at: hip(-0.45), p: [0.13, 0, -0.12], g: [0, -1, 0.2], n: N.left, curl: 0.85 },
+        { t: 2.6, p: [0.26, -0.55, 0.15], g: G.down, n: N.left },
+      ],
+      l: [
+        { t: 0.4, at: hip(0.08), p: [-0.13, 0, -0.1], g: [0, -1, 0.2], n: N.right, curl: 0.85 },
+        { t: 1.6, at: hip(-0.45), p: [-0.13, 0, -0.12], g: [0, -1, 0.2], n: N.right, curl: 0.85 },
+        { t: 2.6, p: [-0.26, -0.55, 0.15], g: G.down, n: N.right },
+      ],
+      ev: [{ t: 0.5, fn: SFX.click }, { t: 1.2, fn: () => { X.setClothes({ bottom: false }); SFX.cloth(); H.setExpr('ashamed'); } }, { t: 1.9, fn: SFX.thud }],
+    };
+  };
   C.release = drop;
   return C;
 }

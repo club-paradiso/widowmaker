@@ -8,8 +8,8 @@
   "en": "Make Your Cheating Wife<br>Confess Everything"
  },
  "kicker": {
-  "ko": "하룻밤의 심문",
-  "en": "ONE NIGHT OF QUESTIONS"
+  "ko": "진술 청취 · 하룻밤",
+  "en": "Statement · one night"
  },
  "sub": {
   "ko": "정말 한 번뿐이야?",
@@ -48,12 +48,12 @@
   "en": "(blank = \"wife\")"
  },
  "mode_h": {
-  "ko": "남편이 바람폈다",
-  "en": "Husband cheated"
+  "ko": "남편",
+  "en": "Husband"
  },
  "mode_w": {
-  "ko": "아내가 바람폈다",
-  "en": "Wife cheated"
+  "ko": "아내",
+  "en": "Wife"
  },
  "vol": {
   "ko": "소리",
@@ -92,8 +92,8 @@
   "en": "DAY {n}"
  },
  "look_h": {
-  "ko": "{S}의 상태",
-  "en": "{S}"
+  "ko": "{S} · {age}세",
+  "en": "{S}, {age}"
  },
  "hood": {
   "ko": "이웃",
@@ -213,18 +213,18 @@
  },
  "g_ask": {
   "ko": "묻기",
-  "en": "ASK"
+  "en": "Ask"
  },
  "g_press": {
   "ko": "몰아붙이기",
-  "en": "PRESS"
+  "en": "Press"
  },
  "g_other": {
   "ko": "그 밖",
-  "en": "OTHER"
+  "en": "Other"
  },
  "verdictBtn": {
-  "ko": "판결",
+  "ko": "판결 내리기",
   "en": "Verdict"
  },
  "min": {
@@ -347,6 +347,14 @@
   "leave": {
    "ko": "내버려 두기",
    "en": "Leave him"
+  },
+  "stripTop": {
+   "ko": "상의 벗기기",
+   "en": "Remove his shirt"
+  },
+  "stripBottom": {
+   "ko": "하의 벗기기",
+   "en": "Remove his pants"
   }
  },
  "act_w": {
@@ -369,6 +377,14 @@
   "askWhy": {
    "ko": "그 사람 어디가 좋았어?",
    "en": "What did you see in him?"
+  },
+  "stripTop": {
+   "ko": "상의 벗기기",
+   "en": "Remove her top"
+  },
+  "stripBottom": {
+   "ko": "하의 벗기기",
+   "en": "Remove her pants"
   }
  },
  "pickEv": {
@@ -576,8 +592,8 @@
   "en": "#ConfessEverything Rank {rank} · {told}/{N} confessed · {title}"
  },
  "skip": {
-  "ko": "건너뛰기 ▶",
-  "en": "Skip ▶"
+  "ko": "건너뛰기",
+  "en": "Skip"
  },
  "tap": {
   "ko": "▼",
@@ -612,5 +628,25 @@
  "epiSkip": {
   "ko": "건너뛰기 ▶",
   "en": "Skip ▶"
+ },
+ "age": {
+  "ko": "나이",
+  "en": "Age"
+ },
+ "ageUnit": {
+  "ko": "{n}세",
+  "en": "{n}"
+ },
+ "topOff": {
+  "ko": "상의 없음",
+  "en": "No shirt"
+ },
+ "bottomOff": {
+  "ko": "하의 없음",
+  "en": "No pants"
+ },
+ "who": {
+  "ko": "바람핀 쪽",
+  "en": "Who cheated"
  }
 }

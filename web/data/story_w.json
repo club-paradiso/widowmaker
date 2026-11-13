@@ -450,6 +450,22 @@
     "h:…Spam.",
     "I eat my soup and say nothing. I hadn't heard it all."
    ]
+  },
+  "w_strip_top": {
+   "ko": [
+    "가위를 가져와 티셔츠를 목깃부터 잘라 낸다. 속옷은 그대로 둔다."
+   ],
+   "en": [
+    "I get the scissors and cut her T-shirt off from the collar down. I leave her underwear."
+   ]
+  },
+  "w_strip_bottom": {
+   "ko": [
+    "바지와 신발을 벗겨 낸다. 속옷만 남았다."
+   ],
+   "en": [
+    "I pull off her jeans and shoes. Only her underwear is left."
+   ]
   }
  }
 }

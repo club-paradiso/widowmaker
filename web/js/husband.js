@@ -19,8 +19,12 @@ function skinChunk() {
 	reflectedLight.directDiffuse += wIrr * diffuseBRDF * ( 1.0 - F );`);
 }
 
-export async function loadHusband(scene, { url = './assets/husband.glb', envTex = null, faces } = {}) {
-  const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(vq(url));
+export async function loadHusband(scene, { url = './assets/husband.glb', envTex = null, faces, ageTex = null } = {}) {
+  const [gltf, ageMap] = await Promise.all([
+    new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(vq(url)),
+    ageTex ? new THREE.TextureLoader().loadAsync(vq(ageTex)).catch(() => null) : Promise.resolve(null),
+  ]);
+  if (ageMap) { ageMap.colorSpace = THREE.SRGBColorSpace; ageMap.flipY = false; }
   const root = gltf.scene;
   scene.add(root);
   const bones = {};
@@ -31,8 +35,9 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
   // ---------- 재질
   const U = {
     red: { value: [V3(), V3()] }, redK: { value: [0, 0] }, pale: { value: 0 }, wet: { value: 0 }, bruise: { value: 0 },
+    wear: { value: new THREE.Vector2(1, 1) }, ageMap: { value: ageMap }, ageK: { value: 0 },
   };
-  const morphMeshes = [], hair = [];
+  const morphMeshes = [], hair = [], wearTop = [], wearBottom = [], under = { briefs: null, bra: null };
   let skin = null;
   root.traverse((o) => {
     if (!o.isMesh) return;
@@ -41,6 +46,9 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
     const m = o.material;
     const name = m.name || '';
     if (o.morphTargetDictionary) morphMeshes.push(o);
+    if (/top$/.test(o.name)) wearTop.push(o); // GLTFLoader 가 이름의 "." 을 지운다(…03.top → …03top)
+    if (/bottom$/.test(o.name)) wearBottom.push(o);
+    if (/^underwear\./.test(name)) { under[o.name.startsWith('bra') ? 'bra' : 'briefs'] = o; m.roughness = 0.85; m.color.setRGB(0.045, 0.045, 0.05); o.visible = false; }
     if (/^hair\./.test(name)) {
       m.alphaTest = 0.35; m.alphaToCoverage = true; m.transparent = false; m.side = THREE.DoubleSide;
       m.color.multiplyScalar(0.55); m.roughness = 0.72;
@@ -49,7 +57,7 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
     } else if (/^(eyebrows|eyelashes)\./.test(name)) {
       m.transparent = true; m.depthWrite = false; m.alphaTest = 0.05; o.renderOrder = 2; o.castShadow = false;
     } else if (/^eyes\./.test(name)) {
-      m.alphaTest = 0.3; m.roughness = 0.08;
+      m.alphaTest = 0.3; m.roughness = 0.08; m.color.multiply(new THREE.Color(0.72, 0.76, 0.8)); // 따뜻한 조명에서 붉게 뜨지 않게
     } else if (/^(teeth|tongue)\./.test(name)) {
       m.envMapIntensity = 0.05; m.roughness = 0.5; m.color.multiply(new THREE.Color(0.7, 0.66, 0.6));
     } else if (/^clothes\./.test(name)) {
@@ -62,13 +70,20 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
       p.name = name;
       if (envTex) { p.envMap = envTex; p.envMapIntensity = 0.5; }
       p.onBeforeCompile = (sh) => {
-        Object.assign(sh.uniforms, { uRed: U.red, uRedK: U.redK, uPale: U.pale, uWet: U.wet, uBruise: U.bruise });
+        Object.assign(sh.uniforms, { uRed: U.red, uRedK: U.redK, uPale: U.pale, uWet: U.wet, uBruise: U.bruise, uWear: U.wear, uAgeMap: U.ageMap, uAgeK: U.ageK });
+        if (ageMap) sh.defines = { ...(sh.defines || {}), AGE_MAP: '' };
         sh.vertexShader = sh.vertexShader
-          .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
-          .replace('#include <project_vertex>', '#include <project_vertex>\nvWPos = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;');
+          .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nattribute vec2 _hide;\nvarying vec2 vHide;')
+          .replace('#include <project_vertex>', '#include <project_vertex>\nvWPos = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;\nvHide = _hide;');
         sh.fragmentShader = sh.fragmentShader
-          .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nuniform vec3 uRed[2];\nuniform float uRedK[2];\nuniform float uPale;\nuniform float uWet;\nuniform float uBruise;')
+          .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec2 vHide;\nuniform vec2 uWear;\nuniform sampler2D uAgeMap;\nuniform float uAgeK;\nuniform vec3 uRed[2];\nuniform float uRedK[2];\nuniform float uPale;\nuniform float uWet;\nuniform float uBruise;')
+          .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+	// 옷 밑의 몸은 옷을 입은 동안 그리지 않는다(옷을 벗기면 보인다)
+	if ( ( vHide.x > 0.5 && uWear.x > 0.5 ) || ( vHide.y > 0.5 && uWear.y > 0.5 ) ) discard;`)
           .replace('#include <map_fragment>', `#include <map_fragment>
+	#ifdef AGE_MAP
+	diffuseColor.rgb = mix( diffuseColor.rgb, texture2D( uAgeMap, vMapUv ).rgb * diffuse, uAgeK );
+	#endif
 	float lum = dot( diffuseColor.rgb, vec3( 0.3, 0.59, 0.11 ) );
 	diffuseColor.rgb = mix( diffuseColor.rgb, vec3( lum ) * vec3( 0.96, 0.99, 1.05 ) * 1.04, uPale * 0.6 );
 	float red = 0.0;
@@ -318,6 +333,7 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
         else add(VIS[sy.v] || VIS.a, open);
       }
     }
+    out.age = AGE.k;
     // 적용(0~1)
     for (const m of morphMeshes) {
       const dict = m.morphTargetDictionary, inf = m.morphTargetInfluences;
@@ -378,6 +394,24 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
   H.eyeMidRest = eyeMid.clone();
   H.wristMid = () => bones.hand_l.getWorldPosition(V3()).add(bones.hand_r.getWorldPosition(V3())).multiplyScalar(0.5);
 
+  // ---------- 옷과 나이
+  const WEAR = { top: true, bottom: true };
+  H.setClothes = ({ top = WEAR.top, bottom = WEAR.bottom } = {}) => {
+    WEAR.top = top; WEAR.bottom = bottom;
+    wearTop.forEach((o) => (o.visible = top)); wearBottom.forEach((o) => (o.visible = bottom));
+    if (under.bra) under.bra.visible = !top;
+    if (under.briefs) under.briefs.visible = !bottom; // 속옷은 늘 남는다(옷을 벗기면 보일 뿐)
+    U.wear.value.set(top ? 1 : 0, bottom ? 1 : 0);
+  };
+  H.clothes = () => ({ ...WEAR });
+  H.setClothes();
+  const AGE = { k: 0, skin: 0 };
+  H.setAge = (age) => {
+    AGE.k = Math.max(0, (age - 25) / 65); // MakeHuman: 25세 → 90세 사이
+    U.ageK.value = Math.min(1, Math.max(0, (age - 30) / 16)) * 0.85; // 30대 중반부터 중년 피부 쪽으로
+    for (const h of hair) { const g = Math.max(0, (age - 38) / 12) * 0.35; h.userData.grey = g; }
+  };
+
   // ---------- 매 프레임
   H.update = (dt) => {
     pose(dt);
@@ -389,7 +423,11 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
     U.redK.value[0] = SK.red[0]; U.redK.value[1] = SK.red[1];
     H.point('cheekL', U.red.value[0]); H.point('cheekR', U.red.value[1]);
     U.pale.value = SK.pale; U.wet.value = SK.wet;
-    for (const h of hair) h.material.roughness = lerp(0.72, 0.3, SK.wet);
+    for (const h of hair) {
+      h.material.roughness = lerp(0.72, 0.3, SK.wet);
+      if (h.userData.base === undefined) h.userData.base = h.material.color.clone();
+      h.material.color.copy(h.userData.base).lerp(new THREE.Color(0.55, 0.53, 0.5), h.userData.grey || 0);
+    }
   };
   H.setLook = (p, k = 1) => { S.look = p; S.lookK = k; };
   H.headTop = headTop;
