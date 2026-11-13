@@ -16,6 +16,7 @@ import { newGame, act, available, verdict, keepGoing, ACTIONS, labelKey, baselin
 
 const q = new URLSearchParams(location.search);
 const FAST = q.has('fast') ? 0.1 : 1;
+const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches; // 움직임 줄이기: 화면 흔들림·숨 흔들림·번쩍임 끔
 const $ = (id) => document.getElementById(id);
 const MODE = I18N.pickMode();
 const story = await I18N.load(undefined, MODE);
@@ -44,15 +45,15 @@ camera.fov = fitFov(innerWidth / innerHeight); camera.updateProjectionMatrix();
 THREE.DefaultLoadingManager.onProgress = (url, n, total) => { $('go').textContent = `${t('loading')} ${Math.round((n / Math.max(1, total)) * 100)}%`; };
 const room = makeRoom(scene);
 const [H, A] = await Promise.all([
-  loadHusband(scene, { url: MODE === 'w' ? './assets/spouse_f.glb' : './assets/husband.glb', envTex, faces }),
+  loadHusband(scene, { url: MODE === 'w' ? './assets/spouse_f.glb' : './assets/husband.glb', envTex, faces, ageTex: MODE === 'w' ? './assets/skin_mid_f.webp' : './assets/skin_mid_m.webp' }),
   loadArms(scene, camera, { url: MODE === 'w' ? './assets/hands_m.glb' : './assets/wife.glb', envTex, ring: true }),
 ]);
 H.setExpr('nervous');
 const fxTicks = [];
 let shakeAmp = 0;
 const fx = {
-  flash: (k) => { const f = $('flash'); f.style.transition = 'none'; f.style.opacity = k; requestAnimationFrame(() => { f.style.transition = 'opacity .35s'; f.style.opacity = 0; }); },
-  shake: (k) => { shakeAmp = Math.max(shakeAmp, k); },
+  flash: (k) => { if (CALM) return; const f = $('flash'); f.style.transition = 'none'; f.style.opacity = k; requestAnimationFrame(() => { f.style.transition = 'opacity .35s'; f.style.opacity = 0; }); },
+  shake: (k) => { if (!CALM) shakeAmp = Math.max(shakeAmp, k); },
   tick: (fn) => fxTicks.push(fn),
   lamp: (k) => { room.lights.key.intensity = 26 * k; },
 };
@@ -60,6 +61,7 @@ const fx = {
 let blindObj = null, toolboxObj = null, recorderObj = null;
 const X = {
   H, A, scene, fx,
+  setClothes: (c) => H.setClothes(c),
   setBlind(on) {
     if (on && !blindObj) { blindObj = P.blindfold(); H.attachToHead(blindObj, H.eyeMidRest.clone().add(new THREE.Vector3(0, 0.005, -0.075))); }
     if (blindObj) blindObj.visible = on;
@@ -76,6 +78,7 @@ const C = makeClips(X);
 const VIEWS = {
   base: () => ({ pos: new THREE.Vector3(0.02, 1.58, 1.75), look: H.point('eyes').add(new THREE.Vector3(0, -0.22, 0)) }),
   near: () => ({ pos: new THREE.Vector3(0.03, 1.58, 0.6), look: H.point('eyes').add(new THREE.Vector3(0, -0.06, 0)) }),
+  low2: () => ({ pos: new THREE.Vector3(0.05, 1.25, 0.6), look: H.point('pelvis').add(new THREE.Vector3(0, -0.2, 0)) }),
   chest: () => ({ pos: new THREE.Vector3(0.05, 1.5, 0.62), look: H.point('spine_03').add(new THREE.Vector3(0, 0.05, 0)) }),
   rope: () => ({ pos: new THREE.Vector3(0.02, 1.62, 0.42), look: H.wristMid().add(new THREE.Vector3(0, 0.12, 0)) }),
   low: () => ({ pos: new THREE.Vector3(0.1, 1.2, 0.95), look: new THREE.Vector3(0.25, 0.25, 0.3) }),
@@ -91,7 +94,9 @@ H.update(1 / 60);
 
 // ---------------------------------------------------------------- 게임 상태
 let seed = +(q.get('seed') || Math.floor(Math.random() * 1e9));
-let G = newGame(story, seed);
+const readAge = () => Math.max(20, Math.min(49, +($('age')?.value || store.get('wm_age') || 32)));
+let G = newGame(story, seed, { age: readAge() });
+H.setAge(G.age);
 let ACTS = [];
 const lineRnd = rng(seed ^ 0x1234); // 대사 고르기용(진상과 별개)
 let ended = false;
@@ -125,7 +130,8 @@ function staticTexts() {
   $('title').innerHTML = t('title'); $('lead').innerHTML = t('lead');
   $('hname').placeholder = t('name_ph');
   document.querySelectorAll('#langRow button').forEach((b) => b.classList.toggle('on', b.dataset.lang === I18N.lang));
-  document.querySelectorAll('#modeRow button').forEach((b) => { b.textContent = t('mode_' + b.dataset.mode); b.classList.toggle('on', b.dataset.mode === MODE); });
+  document.querySelectorAll('#modeRow button').forEach((b) => { b.textContent = t('mode_' + b.dataset.mode); b.classList.toggle('on', b.dataset.mode === MODE); b.setAttribute('aria-pressed', b.dataset.mode === MODE); });
+  document.querySelectorAll('#langRow button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.lang === I18N.lang));
   $('skip').textContent = t('skip');
   $('logHead').innerHTML = `${t('notes_conf')}<i id="logN"></i>`; $('eviHead').textContent = t('notes_ev');
 }
@@ -133,6 +139,7 @@ staticTexts();
 document.querySelectorAll('#langRow button').forEach((b) => (b.onclick = () => { store.set('wm_lang', b.dataset.lang); const u = new URL(location.href); u.searchParams.set('lang', b.dataset.lang); location.href = u.toString(); }));
 document.querySelectorAll('#modeRow button').forEach((b) => (b.onclick = () => { if (b.dataset.mode === MODE) return; store.set('wm_mode', b.dataset.mode); const u = new URL(location.href); u.searchParams.set('mode', b.dataset.mode); location.href = u.toString(); }));
 $('hname').value = store.get('wm_name') || '';
+{ const a = $('age'); a.value = store.get('wm_age') || 32; const show = () => { $('ageOut').textContent = t('ageUnit', { n: a.value }); H.setAge(+a.value); }; a.oninput = show; show(); }
 { const v = JSON.parse(store.get('wm_vol') || '{}'); for (const k of ['se', 'amb', 'bgm']) { const val = v[k] ?? AU.volumes()[k]; $(`vol_${k}`).value = Math.round(val * 100); AU.setVolume(k, val); $(`vol_${k}`).oninput = (e) => { AU.setVolume(k, e.target.value / 100); store.set('wm_vol', JSON.stringify(AU.volumes())); }; } }
 
 function hud() {
@@ -140,13 +147,15 @@ function hud() {
   $('day').textContent = t('day', { n: G.day });
   $('clock').textContent = clock(G);
   room.setClock(G.min);
-  $('condLab').textContent = t('look_h'); $('armLab').textContent = t('arms'); $('hoodLab').textContent = t('hood');
+  $('condLab').textContent = t('look_h', { age: G.age }); $('armLab').textContent = t('arms'); $('hoodLab').textContent = t('hood');
   const c = $('cond'); c.textContent = t(L.hp); c.className = 'state' + (L.hpLevel >= 3 ? ' bad' : L.hpLevel >= 2 ? ' worse' : '');
   const a = $('arm'); a.textContent = t(L.arms ? (L.arms === 'arm1' ? 'arm1' : 'arm2') : 'arm0'); a.className = 'state' + (L.arms === 'arm2' ? ' bad' : L.arms ? ' worse' : '');
   const h = $('hood'); h.textContent = t(L.noise); h.className = 'state' + (L.noiseLevel >= 3 ? ' bad' : L.noiseLevel >= 2 ? ' worse' : '');
   const tags = [];
   tags.push(`<span>${t('tension' + G.tension)}</span>`);
   if (L.hunger) tags.push(`<span>${t(L.hunger)}</span>`);
+  if (!G.top) tags.push(`<span>${t('topOff')}</span>`);
+  if (!G.bottom) tags.push(`<span>${t('bottomOff')}</span>`);
   if (G.blind) tags.push(`<span>${t('blindTag')}</span>`);
   if (G.recording) tags.push(`<span class="rec">● ${t('recTag')}</span>`);
   if (G.drunk >= 1.5 || G.foolMin > 0) tags.push(`<span>${t('drunkTag')}</span>`);
@@ -180,11 +189,12 @@ function actions() {
     if (!av.has(id)) continue;
     const k = labelKey(G, id);
     const label = k ? (MODE === 'w' && I18N.ui.act_w?.[k] ? loc(I18N.ui.act_w[k]) : t('act.' + k)) : (I18N.lang === 'ko' ? `「${loc(baselineQ(G).q)}」` : `“${loc(baselineQ(G).q)}”`);
-    groups[a.group].push(`<button class="${a.group}" data-act="${id}">${label}<small>${minLabel(a.min)}</small></button>`);
+    groups[a.group].push(`<button data-act="${id}"><span>${label}</span><small>${minLabel(a.min)}</small></button>`);
   }
   const verdictBtn = `<button class="verdict" data-act="__verdict">${t('verdictBtn')}</button>`;
-  $('acts').innerHTML = `<div class="tabs">${['ask', 'press', 'other'].map((g) => `<button data-tab="${g}" class="${tab === g ? 'on' : ''}">${t('g_' + g)}</button>`).join('')}${verdictBtn}</div>`
-    + ['ask', 'press', 'other'].map((g) => `<div class="row ${tab === g ? 'on' : ''}"><span>${t('g_' + g)}</span>${groups[g].join('')}${g === 'ask' ? verdictBtn : ''}</div>`).join('');
+  $('acts').innerHTML = `<div class="tabs" role="tablist">${['ask', 'press', 'other'].map((g) => `<button role="tab" data-tab="${g}" aria-selected="${tab === g}" class="${tab === g ? 'on' : ''}">${t('g_' + g)}</button>`).join('')}${verdictBtn}</div>`
+    + ['ask', 'press', 'other'].map((g) => `<div class="col ${g} ${tab === g ? 'on' : ''}"><h4>${t('g_' + g)}</h4><div class="list">${groups[g].join('')}</div></div>`).join('')
+    + `<div class="verdictWrap">${verdictBtn}</div>`;
   $('acts').querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { tab = b.dataset.tab; actions(); }));
   $('acts').querySelectorAll('[data-act]').forEach((b) => (b.onclick = () => onAct(b.dataset.act)));
   layoutSub();
@@ -237,6 +247,8 @@ function clipFor(id) {
     case 'tools': return C.tools();
     case 'shock': return C.shock();
     case 'smash': return C.smash(MODE === 'w' ? 'ring' : 'watch');
+    case 'stripTop': return C.stripTop();
+    case 'stripBottom': return C.stripBottom();
     case 'divorce': return C.divorce();
     case 'call': return C.call();
     case 'feed': return C.feed();
@@ -278,7 +290,7 @@ async function playEvents(id, evs) {
         const c = clipFor(ev.name);
         clipDone = runClip(c);
         // 맞는 동작은 끝까지 보고 나서 대사로
-        if (['slap', 'slapHard', 'water', 'shock', 'smash', 'tighten', 'loosen', 'hair', 'tools', 'blindOn', 'blindOff', 'divorce', 'call', 'feed', 'drink', 'recordOn', 'rest'].includes(ev.name)) await clipDone;
+        if (['stripTop', 'stripBottom', 'slap', 'slapHard', 'water', 'shock', 'smash', 'tighten', 'loosen', 'hair', 'tools', 'blindOn', 'blindOff', 'divorce', 'call', 'feed', 'drink', 'recordOn', 'rest'].includes(ev.name)) await clipDone;
         break;
       }
       case 'tension': break; // 클립의 사건에서 바꾼다
@@ -430,7 +442,7 @@ function result(r) {
   const amount = r.kind === 'divorce' && !r.arrested ? `<p>${t('resText.amount', { amount: I18N.won(r.amount) })}${r.coercion > 0.3 ? `<br><small>${t('resText.coerced')}</small>` : ''}</p>` : '';
   const tellLabel = I18N.fill(loc(faces.tells[r.tell].label));
   const shareText = t('shareText', { rank: r.rank, N: r.N, told: r.told, title });
-  card.innerHTML = `<div class="rank">${r.rank}</div><h2>${title}</h2><p class="story">${story1}</p>${amount}
+  card.innerHTML = `<div class="rank"><small>${t('rank')}</small>${r.rank}</div><h2>${title}</h2><p class="story">${story1}</p>${amount}
     ${r.perfect ? `<p class="praise">${t('perfect')}</p>` : ''}
     <h3>${t('truth')}</h3><ul>${r.affairs.map((a) => `<li class="${a.confessed ? 'got' : 'hid'}">${I18N.word(a.partner)} <em>${a.confessed ? t('got') : t('hid')}</em><br><small>${I18N.word(a.when)} · ${I18N.word(a.place)}</small></li>`).join('')}</ul>
     <h3>${t('score')}</h3><dl><dt>${t('score')}</dt><dd>${r.score}</dd><dt>${t('tellWas')}</dt><dd>${tellLabel}</dd><dt>${t('force')}</dt><dd>${r.force === 0 ? t('force0') : r.force}</dd><dt>${t('rambles')}</dt><dd>${r.rambles}</dd></dl>
@@ -444,14 +456,14 @@ function result(r) {
 }
 
 // ---------------------------------------------------------------- 저장·이어하기(seed + 행동 목록만)
-function saveGame() { store.set(SAVE_KEY, JSON.stringify({ seed, mode: MODE, name: $('hname').value.trim(), acts: ACTS })); }
+function saveGame() { store.set(SAVE_KEY, JSON.stringify({ seed, mode: MODE, age: G.age, name: $('hname').value.trim(), acts: ACTS })); }
 function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch { /* */ } }
 function loadSave() { try { const s = JSON.parse(store.get(SAVE_KEY) || 'null'); return s && s.mode === MODE && Array.isArray(s.acts) && s.acts.length ? s : null; } catch { return null; } }
 function replay(s) {
-  seed = s.seed; G = newGame(story, seed); ACTS = [];
+  seed = s.seed; G = newGame(story, seed, { age: s.age }); ACTS = []; H.setAge(G.age);
   for (const [id, arg] of s.acts) { ACTS.push(arg === undefined ? [id] : [id, arg]); if (id === '__keep') keepGoing(G); else act(G, id, arg); }
   // 화면 상태 맞추기
-  H.state.tension = G.tension; X.setBlind(G.blind); if (G.toolShows) X.placeToolbox(); X.placeRecorder(G.recording);
+  H.state.tension = G.tension; X.setBlind(G.blind); H.setClothes({ top: G.top, bottom: G.bottom }); if (G.toolShows) X.placeToolbox(); X.placeRecorder(G.recording);
   if (G.waters) H.wet(0.4);
 }
 const saved = loadSave();
@@ -461,6 +473,7 @@ if (saved) { $('resume').hidden = false; $('resume').textContent = t('resume'); 
 async function begin(resume = false) {
   AU.unlock(); AU.ambient('night', () => G.min); AU.bgm('night');
   I18N.setName($('hname').value); store.set('wm_name', $('hname').value.trim());
+  if (!(resume && saved)) { store.set('wm_age', String(readAge())); G = newGame(story, seed, { age: readAge() }); H.setAge(G.age); }
   $('start').classList.remove('on');
   if (resume && saved) {
     replay(saved); refresh();
@@ -507,7 +520,7 @@ function tick(dt) {
   camera.position.copy(camPos);
   if (shakeAmp > 0) { camera.position.x += (Math.random() - 0.5) * shakeAmp; camera.position.y += (Math.random() - 0.5) * shakeAmp; shakeAmp = Math.max(0, shakeAmp - dt * 0.06); }
   // 숨쉬는 듯한 아주 작은 흔들림
-  camera.position.y += Math.sin(performance.now() / 1300) * 0.003;
+  if (!CALM) camera.position.y += Math.sin(performance.now() / 1300) * 0.003;
   camera.lookAt(camLook);
   if (H.root.visible) H.setLook(camera.position, G.fear > 70 ? 0.4 : 0.8);
   A.update(dt);

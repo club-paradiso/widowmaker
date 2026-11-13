@@ -14,7 +14,9 @@ export function rng(seed) { // mulberry32
 }
 export const clamp = (x, a = 0, b = 100) => Math.max(a, Math.min(b, x));
 
-export function newGame(story, seed = Date.now() % 1e9) {
+export const AGE_MIN = 20, AGE_MAX = 49;
+export function newGame(story, seed = Date.now() % 1e9, opts = {}) {
+  const age = Math.max(AGE_MIN, Math.min(AGE_MAX, Math.round(+opts.age || 32)));
   seed = Math.floor(Math.abs(+seed || 0)) >>> 0;
   const rnd = rng(seed);
   const fz = rng((seed ^ 0x9e3779b9) >>> 0); // 화면 표시 경계값(진상 난수열을 건드리지 않게 따로)
@@ -44,10 +46,11 @@ export function newGame(story, seed = Date.now() % 1e9) {
   return {
     story, seed, rnd, N, affairs, evidence, phoneRows, tell,
     min: START, day: 1, ended: null,
-    hp: 100, pain: 0, fear: 15, stress: 25, confusion: 0, noise: 0, hunger: 20, strain: 10, drunk: 0, foolMin: 0,
-    tension: 1, blind: false, recording: false, recStart: null, hairHold: 0, bonus: 0, bonusTurns: 0,
+    age, ageK: 1 + (age - 25) * 0.012, // 나이: 어깨 부담이 쌓이는 속도와 시작 체력에 반영
+    hp: 100 - Math.max(0, age - 30) * 0.5, pain: 0, fear: 15, stress: 25, confusion: 0, noise: 0, hunger: 20, strain: 10, drunk: 0, foolMin: 0,
+    tension: 1, top: true, bottom: true, blind: false, recording: false, recStart: null, hairHold: 0, bonus: 0, bonusTurns: 0,
     baseline: 0, whyUsed: false, loveAsked: 0, minimizeUsed: 0, toolShows: 0, smashed: false, divorceUsed: false, motherUsed: false, phoneOpened: false,
-    slaps: 0, hardSlaps: 0, shocks: 0, waters: 0, hairPulls: 0, drinks: 0, tightens: 0,
+    slaps: 0, hardSlaps: 0, strips: 0, shocks: 0, waters: 0, hairPulls: 0, drinks: 0, tightens: 0,
     rambles: 0, turn: 0, warned: 0,
     fuzz: { hp: [jit(75, 7), jit(52, 8), jit(30, 6), jit(14, 4)], noise: [jit(35, 8), jit(60, 8), jit(84, 5)], hunger: [jit(60, 8), jit(82, 6)], strain: [jit(45, 8), jit(75, 7)] },
     log: [],
@@ -58,10 +61,11 @@ export function newGame(story, seed = Date.now() % 1e9) {
 function advance(s, min, out) {
   for (let i = 0; i < min && !s.ended; i++) {
     s.min++;
-    const rate = [0.03, 0.09, 0.22][s.tension];
+    const rate = [0.03, 0.09, 0.22][s.tension] * s.ageK;
     s.strain = clamp(s.strain + rate - (s.tension === 0 ? 0.12 : 0));
     if (s.strain > 70) s.hp -= 0.04 + (s.strain - 70) * 0.004; // 어깨가 한계를 넘으면 체력이 깎인다
     if (s.hunger > 80) s.hp -= 0.02;
+    s.hp -= ((s.top ? 0 : 1) + (s.bottom ? 0 : 1)) * 0.006; // 옷을 벗기면 몸이 식는다
     s.pain = clamp(Math.max(s.pain - 0.25, s.strain * 0.45));
     s.hunger = clamp(s.hunger + 0.08);
     s.noise = clamp(s.noise - 0.18);
@@ -156,6 +160,8 @@ export const ACTIONS = {
   tools: { group: 'press', min: 3 },
   shock: { group: 'press', min: 3 },
   smash: { group: 'press', min: 3 },
+  stripTop: { group: 'press', min: 4 },
+  stripBottom: { group: 'press', min: 4 },
   divorce: { group: 'press', min: 3 },
   mother: { group: 'press', min: 3 },
   phone: { group: 'other', min: 10 },
@@ -175,6 +181,8 @@ export function available(s) {
     if (id === 'askWhy') return !s.whyUsed && s.affairs.some((a) => a.confessed);
     if (id === 'evidence') return s.evidence.some((e) => e.found && !e.used);
     if (id === 'smash') return !s.smashed;
+    if (id === 'stripTop') return s.top;
+    if (id === 'stripBottom') return s.bottom;
     if (id === 'divorce') return !s.divorceUsed;
     if (id === 'mother') return !s.motherUsed;
     if (id === 'tighten') return s.tension < 2;
@@ -342,6 +350,15 @@ export function act(s, id, arg) {
       say(out, 'w', 'w_smash');
       say(out, 'h', 'smash_h', {}, { face: 'crying' });
       break;
+    case 'stripTop': case 'stripBottom': { // 상의·하의 벗기기(속옷은 남긴다): 수치심과 추위
+      const top = id === 'stripTop';
+      s[top ? 'top' : 'bottom'] = false; s.strips++;
+      s.stress = clamp(s.stress + 16); s.fear = clamp(s.fear + 6);
+      out.push({ t: 'anim', name: id }); noise(2);
+      say(out, 'w', top ? 'w_strip_top' : 'w_strip_bottom');
+      say(out, 'h', top ? 'strip_top_h' : 'strip_bottom_h', {}, { face: 'ashamed' });
+      break;
+    }
     case 'divorce':
       s.divorceUsed = true; s.stress = clamp(s.stress + 25); s.fear = clamp(s.fear + 6);
       out.push({ t: 'anim', name: 'divorce' });
@@ -424,7 +441,7 @@ function finish(s, out) { out.push({ t: 'end', kind: s.ended }); }
 
 // ---------------------------------------------------------------- 판결과 답 맞추기
 export const STR_WON = { 3: 500, 2: 300, 1: 100 }; // 증거 강도 → 위자료 덤(만 원)
-export const forceOf = (s) => s.slaps * 1.5 + s.hardSlaps * 3 + s.shocks * 5 + s.hairPulls + s.waters * 0.5 + s.tightens * 1.5 + s.toolShows * 0.5 + (s.smashed ? 2 : 0);
+export const forceOf = (s) => s.slaps * 1.5 + s.hardSlaps * 3 + s.shocks * 5 + s.hairPulls + s.waters * 0.5 + s.tightens * 1.5 + s.toolShows * 0.5 + (s.smashed ? 2 : 0) + s.strips * 1.5;
 
 export function verdict(s, kind) {
   const N = s.N;
@@ -457,7 +474,7 @@ export function verdict(s, kind) {
     kind, ended: s.ended, told, N, amount, score, rank, force: Math.round(force), coercion, arrested, epilogue, good,
     perfect: force === 0 && !hidden.length,
     affairs: s.affairs.map((a) => ({ partner: a.partner, when: a.when, place: a.place, confessed: a.confessed })),
-    tell: s.tell, rambles: s.rambles, day: s.day,
+    tell: s.tell, rambles: s.rambles, day: s.day, age: s.age,
   };
 }
 

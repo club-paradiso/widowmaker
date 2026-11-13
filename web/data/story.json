@@ -1410,6 +1410,42 @@
     "w:…Take care.",
     "I say it to no one, and open the curtains."
    ]
+  },
+  "w_strip_top": {
+   "ko": [
+    "가위를 가져와 셔츠를 목깃부터 잘라 낸다."
+   ],
+   "en": [
+    "I get the scissors and cut his shirt off from the collar down."
+   ]
+  },
+  "w_strip_bottom": {
+   "ko": [
+    "벨트를 풀고 바지와 신발을 벗겨 낸다. 속옷만 남았다."
+   ],
+   "en": [
+    "I undo his belt and pull off his jeans and shoes. Only his underwear is left."
+   ]
+  },
+  "strip_top_h": {
+   "ko": [
+    "…이건 아니잖아. 춥다고…",
+    "하지 마… 창피해."
+   ],
+   "en": [
+    "…This isn't right. It's cold…",
+    "Don't… this is humiliating."
+   ]
+  },
+  "strip_bottom_h": {
+   "ko": [
+    "그, 그만해… 제발.",
+    "…이렇게까지 해야 돼?"
+   ],
+   "en": [
+    "St-stop… please.",
+    "…You really have to go this far?"
+   ]
   }
  }
 }

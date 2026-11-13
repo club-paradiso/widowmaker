@@ -63,6 +63,8 @@ export const SFX = {
   thud: () => { tone(70, 0.25, { gain: 0.6, fEnd: 40 }); noise(0.15, { type: 'lowpass', f: 500, gain: 0.4, decay: 0.12 }); },
   metal: () => { for (const f of [820, 1340, 2210]) tone(f, 0.6, { type: 'triangle', gain: 0.07, decay: 0.55 }); noise(0.08, { type: 'highpass', f: 2500, gain: 0.3, decay: 0.05 }); },
   smash: () => { SFX.thud(); for (let i = 0; i < 18; i++) { tone(2500 + Math.random() * 4000, 0.12, { type: 'triangle', gain: 0.06, at: Math.random() * 0.3, decay: 0.1 }); } noise(0.4, { type: 'highpass', f: 2000, gain: 0.5, decay: 0.3 }); },
+  snip: () => { for (let i = 0; i < 5; i++) { noise(0.04, { type: 'highpass', f: 3500, gain: 0.35, at: i * 0.16, decay: 0.03 }); tone(2400, 0.03, { type: 'triangle', gain: 0.05, at: i * 0.16 }); } },
+  cloth: () => { noise(0.5, { type: 'bandpass', f: 1600, q: 0.7, gain: 0.22, attack: 0.05, decay: 0.45 }); },
   paper: () => { for (let i = 0; i < 6; i++) noise(0.06, { type: 'bandpass', f: 3000 + Math.random() * 2000, q: 1, gain: 0.18, at: i * 0.05, decay: 0.05 }); },
   chime: () => { tone(1318, 0.4, { gain: 0.12, decay: 0.35 }); tone(1760, 0.5, { gain: 0.1, at: 0.12, decay: 0.45 }); },
   buzz: () => { for (let i = 0; i < 3; i++) tone(170, 0.18, { type: 'square', gain: 0.04, at: i * 0.25 }); },

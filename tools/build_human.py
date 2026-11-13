@@ -152,18 +152,26 @@ ARM_BONES = re.compile(r'^(clavicle|upperarm|lowerarm|hand|thumb|index|middle|ri
 def build(a):
     D = a.mpfb
     base_v, base_vt, base_f, base_g = read_obj(os.path.join(D, '3dobjs/base.obj'))
-    V = base_v.copy()
-    # 체형: 성별·나이는 universal, 인종은 race 타깃(MakeHuman 의 macro 방식을 단순화)
     sex = 'male' if a.sex == 'male' else 'female'
-    tgt = [(f'targets/macrodetails/universal-{sex}-young-averagemuscle-averageweight.target.gz', 1.0)]
-    for part in a.race.split(','):  # 예: asian:0.6,caucasian:0.4
-        r, _, w = part.partition(':')
-        tgt.append((f'targets/macrodetails/{r}-{sex}-young.target.gz', float(w or 1)))
-    for extra in a.target or []:
-        p, w = extra.rsplit('=', 1); tgt.append((p, float(w)))
-    for p, w in tgt:
-        i, d = read_target(os.path.join(D, p))
-        if len(i): V[i] += d * w  # 평균 체형 타깃은 비어 있다
+    def shape(age):
+        """age: 'young'(25세) 또는 'old'(90세). 성별·근육·키·인종 매크로 + 얼굴 세부 타깃"""
+        Vs = base_v.copy()
+        tgt = [(f'targets/macrodetails/universal-{sex}-{age}-averagemuscle-averageweight.target.gz', 1.0 - a.muscle),
+               (f'targets/macrodetails/universal-{sex}-{age}-maxmuscle-averageweight.target.gz', a.muscle)]
+        if a.height:
+            tgt.append((f'targets/macrodetails/height/{sex}-{age}-averagemuscle-averageweight-maxheight.target.gz', a.height))
+        for part in a.race.split(','):  # 예: asian:0.6,caucasian:0.4
+            r, _, w = part.partition(':')
+            tgt.append((f'targets/macrodetails/{r}-{sex}-{age}.target.gz', float(w or 1)))
+        for extra in a.target or []:
+            p_, w = extra.rsplit('=', 1); tgt.append(((p_ if p_.startswith('targets/') else 'targets/' + p_) + ('' if p_.endswith('.gz') else '.target.gz'), float(w)))
+        for p_, w in tgt:
+            if not w: continue
+            i, d = read_target(os.path.join(D, p_))
+            if len(i): Vs[i] += d * w  # 평균 체형 타깃은 비어 있다
+        return Vs
+    V = shape('young')
+    age_delta = shape('old') - V if a.age_morph else None
     ground = V[:, 1].min()  # 나중에 발바닥을 0 에 맞춘다(아래에서 몸 메시로 다시 잼)
 
     # 그룹별 정점
@@ -219,6 +227,8 @@ def build(a):
             i, d = read_target(os.path.join(a.faceunits, fn))
             full = np.zeros_like(V); full[i] = d
             morph_names.append(fn[:-7]); morph_d.append(full)
+    if age_delta is not None:  # 나이 모프: 25세 → 90세 차이. 런타임에서 (나이-25)/65 만큼 건다
+        morph_names.append('age'); morph_d.append(age_delta)
     morph_d = np.array(morph_d) if morph_d else np.zeros((0,) + V.shape)
 
     meshes = []  # 각 원소: dict(name, pos(obj단위), uv, faces[(vi,ti)], W, morph, mat)
@@ -246,13 +256,74 @@ def build(a):
         proxies.append(mh)
         meshes.append(dict(name=name, kind=kind, pos=pos, uv=pvt, faces=pf, W=pw, morph=pm, mat=mat, z=int(mh.get('z_depth', 50))))
 
-    # 몸(옷이 덮는 정점은 지움)
-    hide = set()
-    for mh in proxies: hide |= mh['delete']
-    bfaces = [base_f[k] for k in body_faces if not all(v in hide for v in base_f[k][0])]
     skin_mat = read_mhmat(a.skin); skin_mat['_dir'] = os.path.dirname(a.skin)
-    meshes.insert(0, dict(name='body', kind='body', pos=V, uv=base_vt, faces=bfaces, W=W, morph=morph_d, mat=skin_mat, z=0))
-
+    jy = lambda name: V[sorted(group_verts[name])].mean(axis=0)[1]
+    pelvisY, neckY = jy('joint-pelvis'), jy('joint-neck')
+    body_v = np.array(sorted(group_verts['body']))
+    if a.arms_only:
+        hide = set()
+        for mh in proxies: hide |= mh['delete']
+        bfaces = [base_f[k] for k in body_faces if not all(v in hide for v in base_f[k][0])]
+        meshes.insert(0, dict(name='body', kind='body', pos=V, uv=base_vt, faces=bfaces, W=W, morph=morph_d, mat=skin_mat, z=0))
+    else:
+        # 옷은 지우지 않고, 덮인 곳을 표시해 둔다(_HIDE: x=상의 밑, y=하의 밑). 옷을 벗기면 그 자리가 보인다
+        waist = pelvisY + 0.8
+        hideM = np.zeros((len(V), 2), np.float32)
+        for (kind, name, _), mh in zip(a.proxy, proxies):
+            if kind != 'clothes': continue
+            for v in mh['delete']:
+                if name.startswith('shoes') or V[v][1] < waist: hideM[v, 1] = 1
+                else: hideM[v, 0] = 1
+        # 옷 메시를 덩어리(이어진 면)별로 상의/하의로 나눈다
+        split = []
+        for m in meshes:
+            if m['kind'] != 'clothes': split.append(m); continue
+            if m['name'].startswith('shoes'):
+                split.append({**m, 'name': m['name'] + '.bottom'}); continue
+            parent = list(range(len(m['pos'])))
+            def find(x):
+                while parent[x] != x: parent[x] = parent[parent[x]]; x = parent[x]
+                return x
+            for vi, _ in m['faces']:
+                for v in vi[1:]: parent[find(v)] = find(vi[0])
+            comp = {}
+            for f in m['faces']: comp.setdefault(find(f[0][0]), []).append(f)
+            groups = {'top': [], 'bottom': []}
+            for fs in comp.values():
+                ys = [m['pos'][v][1] for f in fs for v in f[0]]
+                groups['top' if np.mean(ys) > pelvisY else 'bottom'].extend(fs)
+            for gname, fs in groups.items():
+                if fs: split.append({**m, 'name': f"{m['name']}.{gname}", 'faces': fs})
+        meshes = split
+        bfaces = [base_f[k] for k in body_faces]
+        meshes.insert(0, dict(name='body', kind='body', pos=V, uv=base_vt, faces=bfaces, W=W, morph=morph_d, mat=skin_mat, z=0, hide=hideM))
+        # 속옷: 몸 면 일부를 법선 방향으로 3.5mm 띄워 만든다(항상 몸에 붙어 있음. 옷을 벗겨도 남는다)
+        nrm = np.zeros_like(V)
+        for vi, _ in bfaces:
+            for j in range(1, len(vi) - 1):
+                n = np.cross(V[vi[j]] - V[vi[0]], V[vi[j + 1]] - V[vi[0]])
+                for v in (vi[0], vi[j], vi[j + 1]): nrm[v] += n
+        nrm /= np.linalg.norm(nrm, axis=1, keepdims=True) + 1e-12
+        arm_cols = [bidx[b] for b in bones if ARM_BONES.match(b)]
+        armw = W[:, arm_cols].sum(1)
+        bv = V[body_v]
+        cen = bv[(np.abs(bv[:, 0]) < 0.08) & (bv[:, 1] < pelvisY) & (bv[:, 1] > pelvisY - 3)]
+        crotchY = cen[:, 1].min()
+        def region_mesh(name, inside, color):
+            fs = [f for f in bfaces if all(inside[v] for v in f[0])]
+            pos = V + nrm * a.underwear_gap
+            mat = {'name': name, 'diffuseColor': color, '_dir': ''}
+            return dict(name=name, kind='underwear', pos=pos, uv=base_vt, faces=fs, W=W, morph=morph_d, mat=mat, z=0)
+        y = V[:, 1]
+        briefs = (y <= pelvisY + 0.75) & (y >= crotchY - 0.35) & (armw < 0.2)
+        meshes.append(region_mesh('briefs', briefs, a.underwear_color))
+        if sex == 'female':
+            torso = (np.abs(V[:, 0]) > 0.3) & (np.abs(V[:, 0]) < 1.2) & (y > pelvisY + 2) & (y < neckY - 0.5) & (armw < 0.2)
+            cand = np.where(torso & np.isin(np.arange(len(V)), body_v))[0]
+            bustY = V[cand[np.argmax(V[cand][:, 2])]][1]
+            bra = (y >= bustY - 0.75) & (y <= bustY + 0.6) & (armw < 0.15) & (y > pelvisY + 1.5)
+            meshes.append(region_mesh('bra', bra, a.underwear_color))
+        print('waist', round(waist, 2), 'crotch', round(crotchY, 2), 'meshes', [m['name'] for m in meshes])
     if a.arms_only:
         arm_cols = [bidx[b] for b in bones if ARM_BONES.match(b)]
         for m in meshes:
@@ -357,6 +428,8 @@ def write_glb(out, meshes, bones, rig, world, morph_names, ground, a):
         attrs = {'POSITION': add_acc(pos, 5126, 'VEC3', 34962, True), 'NORMAL': add_acc(n.astype(np.float32), 5126, 'VEC3', 34962),
                  'TEXCOORD_0': add_acc(uv, 5126, 'VEC2', 34962), 'JOINTS_0': add_acc(top.astype(np.uint16), 5123, 'VEC4', 34962),
                  'WEIGHTS_0': add_acc(tw.astype(np.float32), 5126, 'VEC4', 34962)}
+        if m.get('hide') is not None:
+            attrs['_HIDE'] = add_acc(m['hide'][src].astype(np.float32), 5126, 'VEC2', 34962)
         prim = {'attributes': attrs, 'indices': add_acc(tris.reshape(-1), 5125, 'SCALAR', 34963)}
         names = []
         if len(morph_names):
@@ -371,6 +444,7 @@ def write_glb(out, meshes, bones, rig, world, morph_names, ground, a):
         mdef = {'name': f"{m['kind']}.{mat.get('name', m['name'])}", 'pbrMetallicRoughness': {'metallicFactor': 0.0, 'roughnessFactor': 0.7}}
         dc = [float(x) for x in mat.get('diffuseColor', '1 1 1').split()][:3]
         mdef['pbrMetallicRoughness']['baseColorFactor'] = [1, 1, 1, 1] if m['kind'] in ('body', 'clothes') else dc + [1]
+        if m['kind'] == 'underwear': mdef['pbrMetallicRoughness']['roughnessFactor'] = 0.85
         t = tex_path(mat, 'diffuseTexture')
         if t: mdef['pbrMetallicRoughness']['baseColorTexture'] = {'index': add_image(t)}
         t = tex_path(mat, 'normalmapTexture')
@@ -413,6 +487,11 @@ if __name__ == '__main__':
     ap.add_argument('--target', action='append', help='추가 타깃 path=weight (mpfb data 기준)')
     ap.add_argument('--arms-only', action='store_true')
     ap.add_argument('--no-normal', action='store_true')
+    ap.add_argument('--age-morph', action='store_true', help='25→90세 나이 모프 타깃 "age" 를 넣는다')
+    ap.add_argument('--muscle', type=float, default=0.0, help='근육 0~1')
+    ap.add_argument('--height', type=float, default=0.0, help='키 0~1(최대 키 타깃 비율)')
+    ap.add_argument('--underwear-color', default='0.16 0.16 0.18')
+    ap.add_argument('--underwear-gap', type=float, default=0.035, help='속옷이 몸에서 뜨는 거리(dm)')
     a = ap.parse_args()
     a.proxy = [(k, n, None if m == '-' else m) for k, n, m in a.proxy]
     build(a)

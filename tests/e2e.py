@@ -21,7 +21,7 @@ with sync_playwright() as p:
     idle()
     def press(act, tab=None):
         if W < 700 and tab: pg.click(f'#acts .tabs [data-tab="{tab}"]'); time.sleep(0.2)
-        pg.click(f'#acts .row.on [data-act="{act}"]' if W < 700 else f'#acts [data-act="{act}"]')
+        pg.click(f'#acts .col.on [data-act="{act}"]' if W < 700 else f'#acts [data-act="{act}"]')
     for a, tab in [('baseline', 'ask'), ('push', 'ask'), ('slap', 'press'), ('tighten', 'press')]:
         press(a, tab); idle(); print('done', a)
     # 폰
@@ -44,7 +44,7 @@ with sync_playwright() as p:
     pg.click('#pickOpts button[data-i="0"]')
     idle(); print('evidence shown')
     pg.screenshot(path='/tmp/e2e_mid.png')
-    pg.click('#acts .row [data-act="__verdict"]' if W >= 700 else '#acts .tabs [data-act="__verdict"]')
+    pg.click('#acts .verdictWrap [data-act="__verdict"]' if W >= 700 else '#acts .tabs [data-act="__verdict"]')
     pg.wait_for_selector('#pick.on')
     pg.click('#pickOpts button[data-i="2"]')  # 이혼
     pg.wait_for_selector('#result.on', timeout=120000)

@@ -155,3 +155,15 @@ export function shards(scene, at, color = 0xc9b37a) {
     return true;
   };
 }
+
+// 가위: 손잡이는 손 안, 날은 손가락 방향(+Y)으로
+export function scissors() {
+  const g = new THREE.Group();
+  const steel = M(0xc8c8c8, 0.25, 1), grip = M(0x1d1d22, 0.6);
+  for (const s of [-1, 1]) {
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.11, 0.002), steel); blade.position.set(s * 0.004, 0.07, 0); blade.rotation.z = s * 0.08; g.add(blade);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.004, 8, 16), grip); ring.position.set(s * 0.012, -0.005, 0); g.add(ring);
+  }
+  g.position.set(0, 0.0, 0.02);
+  return shadow(g);
+}
