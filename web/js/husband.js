@@ -41,9 +41,11 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
   const U = {
     red: { value: [V3(), V3()] }, redK: { value: [0, 0] }, pale: { value: 0 }, wet: { value: 0 }, bruise: { value: 0 },
     wear: { value: new THREE.Vector2(1, 1) }, ageMap: { value: ageMap }, ageK: { value: 0 },
-    hair: { value: blank1(0, 0, 0, 0) }, hairK: { value: 0.5 }, beardK: { value: 0.4 }, hairGrey: { value: 0 }, sweat: { value: 0 },
+    hair: { value: blank1(0, 0, 0, 0) }, scalp: { value: blank1(0, 0, 0, 255) }, hairK: { value: 0.5 }, beardK: { value: 0.4 }, hairGrey: { value: 0 }, sweat: { value: 0 },
   };
   // 털·수염·땀 구역 지도(tools/bake_hair.py 로 구움): R 몸 털, G 수염, B 땀 구역, A 수염 그늘
+  // 두피 그늘: 머리카락 사이로 맨살이 비치던 곳(앞머리 틈 등)을 머리색으로 깐다
+  new THREE.TextureLoader().load(vq('./assets/scalp.png'), (t) => { t.flipY = false; t.colorSpace = THREE.NoColorSpace; U.scalp.value = t; }, undefined, () => {});
   new THREE.TextureLoader().load(vq('./assets/body_hair.png'), (t) => { t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.anisotropy = 8; U.hair.value = t; }, undefined, () => {});
   const morphMeshes = [], hair = [], wearTop = [], wearBottom = [], under = { briefs: null, bra: null };
   let skin = null;
@@ -58,10 +60,12 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
     if (/bottom$/.test(o.name)) wearBottom.push(o);
     if (/^underwear\./.test(name)) { under[o.name.startsWith('bra') ? 'bra' : 'briefs'] = o; m.roughness = 0.85; m.color.setRGB(0.045, 0.045, 0.05); o.visible = false; }
     if (/^hair\./.test(name)) {
-      m.alphaTest = 0.12; m.alphaToCoverage = true; m.transparent = false; m.side = THREE.DoubleSide;
-      m.color.multiply(new THREE.Color(0.2, 0.19, 0.19)); m.roughness = 0.72; // 참고 사진(01·02)처럼 짙은 흑발
+      // 머리카락: 결 방향으로 은은한 광(시엔)을 주는 물리 재질로 바꿔 덜 뭉쳐 보이게
+      const hp = new THREE.MeshPhysicalMaterial({ map: m.map, color: m.color, alphaTest: 0.12, alphaToCoverage: true, side: THREE.DoubleSide, roughness: 0.75, sheen: 0.0, sheenRoughness: 0.5, sheenColor: new THREE.Color(0.22, 0.19, 0.16), name: m.name });
+      hp.color.multiply(new THREE.Color(0.085, 0.078, 0.075)); // 참고 사진(01·02)처럼 짙은 흑발
+      if (/bob|long|ponytail|braid/.test(name)) hp.color.setRGB(0.2, 0.15, 0.12);
+      o.material = hp;
       hair.push(o);
-      if (/bob|long|ponytail|braid/.test(name)) m.color.setRGB(0.2, 0.15, 0.12);
     } else if (/^(eyebrows|eyelashes)\./.test(name)) {
       m.transparent = true; m.depthWrite = false; m.alphaTest = 0.05; o.renderOrder = 2; o.castShadow = false;
     } else if (/^eyes\./.test(name)) {
@@ -75,10 +79,10 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
       // 셔츠·바지 천(사용자 제작 art/user/11·12): 원래 줄무늬 셔츠·청바지 무늬를 옅은 하늘색 옥스퍼드 셔츠·차콜 바지로 바꾼다. 신발은 그대로
       const fab = /suit/.test(name) ? (/top$/.test(o.name) ? 'fab_shirt' : /bottom$/.test(o.name) ? 'fab_trouser' : null) : null;
       if (fab) {
-        const c = m.clone(); o.material = c; c.color.setRGB(0.8, 0.8, 0.82);
+        const c = m.clone(); o.material = c; if (fab === 'fab_trouser') c.color.setRGB(0.55, 0.55, 0.57); else c.color.setRGB(0.8, 0.8, 0.82);
         // 펜던트 바로 아래라 밝은 천이 하얗게 타지 않게 밝은 쪽만 부드럽게 눌러 준다(색은 유지)
         c.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <tonemapping_fragment>', '{ float L = max( max( gl_FragColor.r, gl_FragColor.g ), gl_FragColor.b ); if ( L > 0.0 ) gl_FragColor.rgb *= ( 1.7 * L / ( 1.0 + 1.7 * L ) ) / L; }\n#include <tonemapping_fragment>'); };
-        new THREE.TextureLoader().load(vq(`./assets/${fab}.webp`), (t) => { t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping; t.repeat.set(3, 3); t.anisotropy = 8; c.map = t; c.needsUpdate = true; }, undefined, () => {});
+        new THREE.TextureLoader().load(vq(`./assets/${fab}.webp`), (t) => { t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping; const rp = fab === 'fab_trouser' ? 7 : 5; t.repeat.set(rp, rp); t.anisotropy = 8; c.map = t; c.needsUpdate = true; }, undefined, () => {});
       }
     } else if (/^body\./.test(name)) {
       const p = new THREE.MeshPhysicalMaterial({
@@ -87,17 +91,17 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
       });
       p.name = name;
       // 모공 요철(사용자 제공 art/user/03 에서 만든 노멀맵). 몸 UV 를 촘촘히 반복한다
-      p.normalScale = new THREE.Vector2(0.45, 0.45);
+      p.normalScale = new THREE.Vector2(0.65, 0.65);
       new THREE.TextureLoader().load(vq('./assets/skin_pore_n.webp'), (t) => { t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping; t.repeat.set(36, 24); t.anisotropy = 8; p.normalMap = t; p.needsUpdate = true; }, undefined, () => {});
       if (envTex) { p.envMap = envTex; p.envMapIntensity = 0.5; }
       p.onBeforeCompile = (sh) => {
-        Object.assign(sh.uniforms, { uRed: U.red, uRedK: U.redK, uPale: U.pale, uWet: U.wet, uBruise: U.bruise, uWear: U.wear, uAgeMap: U.ageMap, uAgeK: U.ageK, uPore: U_PORE, uHair: U.hair, uHairK: U.hairK, uBeardK: U.beardK, uHairGrey: U.hairGrey, uSweat: U.sweat });
+        Object.assign(sh.uniforms, { uRed: U.red, uRedK: U.redK, uPale: U.pale, uWet: U.wet, uBruise: U.bruise, uWear: U.wear, uAgeMap: U.ageMap, uAgeK: U.ageK, uPore: U_PORE, uHair: U.hair, uHairK: U.hairK, uBeardK: U.beardK, uHairGrey: U.hairGrey, uSweat: U.sweat, uScalp: U.scalp });
         if (ageMap) sh.defines = { ...(sh.defines || {}), AGE_MAP: '' };
         sh.vertexShader = sh.vertexShader
           .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nattribute vec2 _hide;\nvarying vec2 vHide;')
           .replace('#include <project_vertex>', '#include <project_vertex>\nvWPos = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;\nvHide = _hide;');
         sh.fragmentShader = sh.fragmentShader
-          .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec2 vHide;\nuniform vec2 uWear;\nuniform sampler2D uAgeMap;\nuniform float uAgeK;\nuniform vec3 uRed[2];\nuniform float uRedK[2];\nuniform float uPale;\nuniform float uWet;\nuniform float uBruise;\nuniform sampler2D uPore;\nfloat poreK = 1.0;\nuniform sampler2D uHair;\nuniform float uHairK;\nuniform float uBeardK;\nuniform float uHairGrey;\nuniform float uSweat;\nfloat wetL = 0.0;\nfloat drop = 0.0;\nfloat hairA = 0.0;')
+          .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec2 vHide;\nuniform vec2 uWear;\nuniform sampler2D uAgeMap;\nuniform float uAgeK;\nuniform vec3 uRed[2];\nuniform float uRedK[2];\nuniform float uPale;\nuniform float uWet;\nuniform float uBruise;\nuniform sampler2D uPore;\nfloat poreK = 1.0;\nuniform sampler2D uHair;\nuniform float uHairK;\nuniform float uBeardK;\nuniform float uHairGrey;\nuniform float uSweat;\nuniform sampler2D uScalp;\nfloat wetL = 0.0;\nfloat drop = 0.0;\nfloat hairA = 0.0;\nfloat scalpK = 0.0;')
           .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
 	// 옷 밑의 몸은 옷을 입은 동안 그리지 않는다(옷을 벗기면 보인다)
 	if ( ( vHide.x > 0.5 && uWear.x > 0.5 ) || ( vHide.y > 0.5 && uWear.y > 0.5 ) ) discard;`)
@@ -112,6 +116,8 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
 	  vec3 hairC = mix( vec3( 0.032, 0.026, 0.022 ), vec3( 0.42, 0.40, 0.38 ), uHairGrey );
 	  diffuseColor.rgb *= 1.0 - hm.a * uBeardK * 0.18;
 	  diffuseColor.rgb = mix( diffuseColor.rgb, hairC, hairA * 0.88 );
+	  scalpK = smoothstep( 0.5, 0.85, texture2D( uScalp, vMapUv ).r );
+	  diffuseColor.rgb = mix( diffuseColor.rgb, mix( vec3( 0.02, 0.018, 0.016 ), vec3( 0.3, 0.29, 0.28 ), uHairGrey ), scalpK * 0.97 );
 	  wetL = clamp( uWet + uSweat * hm.b, 0.0, 1.0 );
 	  vec2 dc = vMapUv * 300.0; vec2 ci = floor( dc ); vec2 cf = fract( dc ) - 0.5;
 	  float rn = fract( sin( dot( ci, vec2( 127.1, 311.7 ) ) ) * 43758.5453 );
@@ -124,7 +130,8 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
 	float red = 0.0;
 	for ( int i = 0; i < 2; i ++ ) red += uRedK[ i ] * ( 1.0 - smoothstep( 0.012, 0.06, length( vWPos - uRed[ i ] ) ) );
 	diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * vec3( 1.22, 0.6, 0.56 ), clamp( red, 0.0, 1.0 ) * 0.7 );`)
-          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix( roughnessFactor * ( 1.12 - 0.12 * poreK ), 0.24, wetL );\nroughnessFactor = mix( roughnessFactor, 0.05, drop );\nroughnessFactor = mix( roughnessFactor, 0.8, hairA );')
+          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix( roughnessFactor * ( 1.12 - 0.12 * poreK ), 0.24, wetL );\nroughnessFactor = mix( roughnessFactor, 0.05, drop );\nroughnessFactor = mix( roughnessFactor, 0.8, hairA );\nroughnessFactor = mix( roughnessFactor, 1.0, scalpK );')
+          .replace('#include <lights_physical_fragment>', '#include <lights_physical_fragment>\n#ifdef USE_SHEEN\nmaterial.sheenColor *= 1.0 - scalpK;\n#endif\nmaterial.specularColor *= 1.0 - 0.85 * scalpK;')
           .replace('#include <lights_physical_pars_fragment>', skinChunk());
       };
       o.material = p;
@@ -380,7 +387,7 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
 
   // ---------- 피부 상태
   const SK = { red: [0, 0], redGoal: [0, 0], pale: 0, paleGoal: 0, wet: 0, sweat: 0, sweatGoal: 0 };
-  H.skinState = SK;
+  H.skinState = SK; H.U = U;
   H.slapMark = (side, k = 0.6) => { const i = side === 'L' ? 0 : 1; SK.redGoal[i] = clamp(SK.redGoal[i] + k, 0, 1); };
   H.setPale = (k) => { SK.paleGoal = clamp(k); };
   H.wet = (k = 1) => { SK.wet = Math.max(SK.wet, k); };
@@ -469,7 +476,7 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
     SK.sweat = damp(SK.sweat, SK.sweatGoal, 0.25, dt);
     U.pale.value = SK.pale; U.wet.value = SK.wet; U.sweat.value = SK.sweat;
     for (const h of hair) {
-      h.material.roughness = lerp(0.72, 0.3, SK.wet);
+      h.material.roughness = lerp(0.72, 0.35, SK.wet);
       if (h.userData.base === undefined) h.userData.base = h.material.color.clone();
       h.material.color.copy(h.userData.base).lerp(new THREE.Color(0.55, 0.53, 0.5), h.userData.grey || 0);
     }

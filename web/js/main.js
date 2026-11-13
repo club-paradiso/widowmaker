@@ -32,7 +32,7 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.NeutralToneMapping;
 renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap; // 화질이 정해진 뒤 아래에서 다시 고른다
 document.body.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x070605);
@@ -48,6 +48,18 @@ const post = makePost(renderer, scene, camera);
 const GFX = ['high', 'low', 'off'];
 const gfx0 = q.get('gfx') || store.get('wm_gfx') || defaultQuality();
 post.set(GFX.includes(gfx0) ? gfx0 : 'high');
+// 높음: 부드러운 그림자 경계(든 팔이 가슴에 드리우는 그림자가 칼로 자른 듯 보이지 않게). 가볍게·끄기는 예전 방식(첫 그리기 전이라 재질을 다시 만들 필요 없음)
+renderer.shadowMap.type = post.mode === 'high' ? THREE.VSMShadowMap : THREE.PCFShadowMap;
+// 사람이 화질을 고르지 않았으면, 실제로 버벅일 때 한 단계씩 낮춘다(평균 프레임이 24fps 아래로 2초 넘게)
+const gfxAuto = !q.get('gfx') && !store.get('wm_gfx');
+const perf = { t: 0, n: 0 };
+function guardPerf(dt) {
+  if (!gfxAuto || post.mode === 'off' || document.hidden) return;
+  perf.t += dt; perf.n++;
+  if (perf.t < 2) return;
+  const avg = perf.t / perf.n; perf.t = 0; perf.n = 0;
+  if (avg > 1 / 24) post.set(post.mode === 'high' ? 'low' : 'off');
+}
 
 THREE.DefaultLoadingManager.onProgress = (url, n, total) => { $('go').textContent = `${t('loading')} ${Math.round((n / Math.max(1, total)) * 100)}%`; };
 const room = makeRoom(scene);
@@ -553,7 +565,7 @@ function tick(dt) {
   post.render(dt);
 }
 if (q.has('step')) window.__step = (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++) tick(dt); };
-else renderer.setAnimationLoop(() => { const now = performance.now(); const dt = Math.min(0.05, (now - last) / 1000); last = now; tick(dt); });
+else renderer.setAnimationLoop(() => { const now = performance.now(); const raw = (now - last) / 1000; const dt = Math.min(0.05, raw); last = now; tick(dt); if (raw < 0.5) guardPerf(raw); });
 
 // 확인용
 window.__act = (id, arg) => perform(id, arg);

@@ -271,13 +271,6 @@ def build(a):
         meshes.insert(0, dict(name='body', kind='body', pos=V, uv=base_vt, faces=bfaces, W=W, morph=morph_d, mat=skin_mat, z=0))
     else:
         # 옷은 지우지 않고, 덮인 곳을 표시해 둔다(_HIDE: x=상의 밑, y=하의 밑). 옷을 벗기면 그 자리가 보인다
-        waist = pelvisY + 0.8
-        hideM = np.zeros((len(V), 2), np.float32)
-        for (kind, name, _), mh in zip(a.proxy, proxies):
-            if kind != 'clothes': continue
-            for v in mh['delete']:
-                if name.startswith('shoes') or V[v][1] < waist: hideM[v, 1] = 1
-                else: hideM[v, 0] = 1
         # 옷 메시를 덩어리(이어진 면)별로 상의/하의로 나눈다
         split = []
         for m in meshes:
@@ -299,6 +292,30 @@ def build(a):
             for gname, fs in groups.items():
                 if fs: split.append({**m, 'name': f"{m['name']}.{gname}", 'faces': fs})
         meshes = split
+        # 하의 밑 피부는 '바지 윗단보다 충분히 아래'인 곳만 숨긴다. 허리선에서 자르면 상의를 벗겼을 때
+        # 피부 끝이 삼각형 모양으로 들쭉날쭉 보였다 → 윗단 근처 피부는 남겨 두고 바지가 덮게 한다
+        bott = [m for m in meshes if m['kind'] == 'clothes' and m['name'].endswith('.bottom') and not m['name'].startswith('shoes')]
+        NB = 48; top_y = np.full(NB, -1e9)
+        for m in bott:
+            used = sorted({v for f in m['faces'] for v in f[0]})
+            P = m['pos'][used]
+            near = P[:, 1] > pelvisY - 1.5
+            ang = np.floor((np.arctan2(P[near, 0], P[near, 2]) + np.pi) / (2 * np.pi) * NB).astype(int) % NB
+            np.maximum.at(top_y, ang, P[near, 1])
+        if bott:  # 빈 칸은 이웃 값으로
+            for _ in range(NB):
+                for i in range(NB):
+                    if top_y[i] < -1e8: top_y[i] = max(top_y[(i - 1) % NB], top_y[(i + 1) % NB])
+        MARGIN = 0.35  # dm: 바지 윗단에서 이만큼 아래부터 숨긴다
+        hideM = np.zeros((len(V), 2), np.float32)
+        for (kind, name, _), mh in zip(a.proxy, proxies):
+            if kind != 'clothes': continue
+            for v in mh['delete']:
+                if name.startswith('shoes'): hideM[v, 1] = 1; continue
+                b = int(np.floor((np.arctan2(V[v][0], V[v][2]) + np.pi) / (2 * np.pi) * NB)) % NB
+                if bott and V[v][1] < top_y[b] - MARGIN: hideM[v, 1] = 1
+                elif not bott and V[v][1] < pelvisY + 0.8: hideM[v, 1] = 1
+                else: hideM[v, 0] = 1
         bfaces = [base_f[k] for k in body_faces]
         meshes.insert(0, dict(name='body', kind='body', pos=V, uv=base_vt, faces=bfaces, W=W, morph=morph_d, mat=skin_mat, z=0, hide=hideM))
         # 속옷: 몸 면 일부를 법선 방향으로 3.5mm 띄워 만든다(항상 몸에 붙어 있음. 옷을 벗겨도 남는다)
@@ -327,7 +344,7 @@ def build(a):
             bustY = V[cand[np.argmax(V[cand][:, 2])]][1]
             bra = (y >= bustY - 0.75) & (y <= bustY + 0.6) & (armw < 0.15) & (y > pelvisY + 1.5)
             meshes.append(region_mesh('bra', bra, a.underwear_color))
-        print('waist', round(waist, 2), 'crotch', round(crotchY, 2), 'meshes', [m['name'] for m in meshes])
+        print('pants top', round(float(np.median(top_y)) if bott else 0, 2), 'crotch', round(crotchY, 2), 'meshes', [m['name'] for m in meshes])
     if a.arms_only:
         arm_cols = [bidx[b] for b in bones if ARM_BONES.match(b)]
         for m in meshes:

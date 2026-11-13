@@ -8,10 +8,10 @@ import argparse, os, sys, math
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 sys.path.insert(0, os.path.dirname(__file__))
-from build_human import read_obj
+from build_human import read_obj, read_mhclo
 
 ap = argparse.ArgumentParser(); ap.add_argument('--mpfb', required=True); ap.add_argument('--out', required=True)
-ap.add_argument('--size', type=int, default=2048); ap.add_argument('--seed', type=int, default=7)
+ap.add_argument('--scalp', help='두피 그늘 지도(L) 출력 경로'); ap.add_argument('--hair-mhclo', help='머리카락 프록시(.mhclo): 이 머리가 덮는 정점을 두피로 본다'); ap.add_argument('--size', type=int, default=2048); ap.add_argument('--seed', type=int, default=7)
 a = ap.parse_args()
 rng = np.random.default_rng(a.seed)
 v, vt, f, g = read_obj(os.path.join(a.mpfb, '3dobjs/base.obj'))
@@ -48,7 +48,7 @@ chest = front * band(y, 3.45, 4.85, 0.25) * np.clip(1 - np.abs(x) / 1.55, 0, 1) 
 # 배꼽 아래로 이어지는 선
 trail = front * band(y, 1.15, 3.5, 0.2) * np.exp(-(x / (0.22 + 0.25 * band(y, 2.2, 2.7, 0.2))) ** 2)
 # 겨드랑이(A 자세에서 어깨 아래·안쪽)
-pit = np.maximum(near(C, shL + np.array([-0.38, -0.78, 0.0]), 0.44), near(C, shR + np.array([0.38, -0.78, 0.0]), 0.44)) ** 0.7 * (y < shL[1] - 0.2)
+pit = np.maximum(near(C, shL + np.array([-0.38, -0.78, 0.0]), 0.44), near(C, shR + np.array([0.38, -0.78, 0.0]), 0.44)) ** 0.45 * (y < shL[1] - 0.2)
 # 팔뚝(팔꿈치→손목 바깥쪽)
 def seg(c, a_, b_, r):
     ab = b_ - a_; t = np.clip(((c - a_) @ ab) / (ab @ ab), 0, 1); d = np.linalg.norm(c - (a_ + t[:, None] * ab), axis=1)
@@ -61,11 +61,13 @@ body = np.clip(np.maximum.reduce([chest, trail * 0.9, pit, fore, legs]), 0, 1)
 MOUTH_Y = 6.60  # 입술 사이 높이(기본 메시). joint-mouth 는 턱관절 안쪽이라 쓰지 않는다
 rel = C - np.array([0.0, MOUTH_Y, 0.0])
 face = (z > head[2] + 0.35) * (N[:, 2] > -0.2)
-lips = (np.abs(rel[:, 0]) < 0.44) * (rel[:, 1] > -0.13) * (rel[:, 1] < 0.08) * (z > 1.2)
-must = band(rel[:, 1], 0.08, 0.2, 0.04) * (np.abs(rel[:, 0]) < 0.46) * (z > 1.2)            # 인중(코 밑~윗입술)
-chinjaw = band(rel[:, 1], -0.62, 0.02, 0.1) * (np.abs(rel[:, 0]) < 1.05)                   # 입꼬리 높이 아래 턱·턱선
-side = band(rel[:, 1], -0.62, 0.14, 0.1) * (np.abs(rel[:, 0]) > 0.62) * (np.abs(rel[:, 0]) < 1.05)  # 귀 앞으로 이어지는 옆선
-under = band(y, 6.0, 6.16, 0.06) * (z > 0.55) * np.clip(1 - np.abs(x) / 0.8, 0, 1) * 0.45                    # 턱 밑
+ax = np.abs(rel[:, 0])
+soft = lambda q, lo, hi, w: smooth(q, lo - w, lo + w) * (1 - smooth(q, hi - w, hi + w))
+lips = soft(ax, -1, 0.44, 0.06) * soft(rel[:, 1], -0.13, 0.08, 0.03) * (z > 1.2)
+must = band(rel[:, 1], 0.08, 0.2, 0.05) * (1 - smooth(ax, 0.36, 0.52)) * (z > 1.2)               # 인중(코 밑~윗입술)
+chinjaw = band(rel[:, 1], -0.62, 0.02, 0.12) * (1 - smooth(ax, 0.9, 1.12))                    # 입꼬리 높이 아래 턱·턱선
+side = band(rel[:, 1], -0.62, 0.14, 0.12) * smooth(ax, 0.5, 0.68) * (1 - smooth(ax, 0.9, 1.12))  # 귀 앞으로 이어지는 옆선
+under = band(y, 6.0, 6.16, 0.08) * (z > 0.55) * np.clip(1 - np.abs(x) / 0.8, 0, 1) * 0.45      # 턱 밑
 beard = np.clip(face * np.maximum.reduce([must, chinjaw, side]) * (1 - lips) + under, 0, 1)
 beard = beard * (y > neck[1] - 0.2)
 
@@ -118,12 +120,13 @@ def strokes(dens, per_dm2, length, spread, down_bias, curl, width, img, seed_off
             dv = to_uv(i, cur * L / 3); q = q + dv; pts.append(q.copy())
             ax = np.cross(nn, cur); cur = cur + ax * curl * rng.normal(0, 1); cur -= nn * (cur @ nn); cur /= max(1e-6, np.linalg.norm(cur))
         if np.abs(pts[-1] - pts[0]).max() > S * 0.03: skipped[0] += 1; continue  # UV 이음매를 넘어가는 가닥은 버린다
-        d.line([tuple(t) for t in pts], fill=int(150 + 105 * rng.random()), width=width)
+        dk = dens[i]  # 구역 가장자리(옅은 곳)는 가늘고 흐리게 → 그려 넣은 경계가 덜 보인다
+        d.line([tuple(t) for t in pts], fill=int((90 + 165 * rng.random()) * (0.35 + 0.65 * dk)), width=width if dk > 0.55 else 1)
 
 skipped = [0]
 imgR = Image.new('L', (S, S), 0); imgG = Image.new('L', (S, S), 0)
 strokes(np.maximum.reduce([chest, trail]), 2600, 0.17, 0.55, 1.0, 0.6, 2, imgR)
-strokes(pit, 9000, 0.22, 1.2, 0.3, 1.0, 2, imgR)
+strokes(pit, 15000, 0.22, 1.2, 0.3, 1.0, 2, imgR)
 strokes(fore, 1500, 0.09, 0.35, 0.0, 0.2, 2, imgR)
 strokes(legs, 1300, 0.11, 0.35, 1.0, 0.25, 2, imgR)
 strokes(beard, 30000, 0.035, 0.6, 1.0, 0.3, 2, imgG)
@@ -135,8 +138,20 @@ def field(vals, blur):
         d.polygon(pts, fill=int(255 * vals[k]))
     return im.filter(ImageFilter.GaussianBlur(blur))
 imgB = field(sweat, 10)
-imgA = field(beard, 6)
+imgA = field(beard, 14)
 # 채널마다 따로 줄인다(RGBA 를 통째로 줄이면 투명한 곳의 RGB 가 0 이 된다)
 out = Image.merge('RGBA', [c.resize((a.size, a.size), Image.LANCZOS) for c in (imgR, imgG, imgB, imgA)])
 out.save(a.out, optimize=True)  # PNG: 손실 WebP 는 채널끼리 번지고, 투명한 곳의 RGB 를 버린다
+if a.scalp:  # 두피: 머리카락 사이로 피부가 비치지 않게 어둡게 깔 곳(앞 헤어라인·옆·뒤)
+    if a.hair_mhclo:  # 머리카락 프록시가 붙어 있는 정점 = 머리가 덮는 곳
+        mh = read_mhclo(a.hair_mhclo)
+        cov = np.zeros(len(v)); 
+        for r in mh['verts']:
+            for vi, w in zip(r[0], r[1]): cov[vi] = max(cov[vi], 1.0)
+        scalp = np.clip((cov[T[:, 0]] + cov[T[:, 1]] + cov[T[:, 2]]) / 3 * 1.5, 0, 1)
+    else:
+        hc = C[:, 1] > 7.0
+        scalp = hc * np.maximum(smooth(y, 7.68, 7.8), smooth(y, 7.25, 7.45) * (1 - smooth(z, 0.2, 0.6)) * smooth(np.abs(x), 0.55, 0.75))
+    field(np.clip(scalp * keep, 0, 1), 12).resize((1024, 1024), Image.LANCZOS).save(a.scalp, optimize=True)
+    print('wrote', a.scalp)
 print('skipped', skipped[0]); print('wrote', a.out, 'strands', int((np.asarray(imgR) > 0).sum()), int((np.asarray(imgG) > 0).sum()))
