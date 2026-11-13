@@ -327,6 +327,9 @@ async function phoneFlow() {
   const ui = $('phoneui'), body = $('phonebody');
   ui.className = 'on';
   const opened = new Set();
+  // 갤러리 사진(사용자 제작 art/user/15~18): 목록은 작은 사진, 열면 큰 사진
+  const thumb = (img) => (img ? `<img class="th" src="./assets/${img}.webp" alt="" loading="lazy">` : '');
+  const photo = (img) => (img ? `<img class="ph" src="./assets/${img}.webp" alt="">` : '');
   let pending = []; // 폰 안의 행동이 아침·결말을 넘기면 폰을 닫고 처리한다
   const sub = (id, arg) => { ACTS.push([id, arg]); const evs = act(G, id, arg); saveGame(); pending.push(...evs.filter((e) => e.t === 'morning' || e.t === 'end')); return pending.length > 0; };
   await new Promise((done) => {
@@ -338,13 +341,13 @@ async function phoneFlow() {
     const openApp = async (app) => {
       if (!opened.has(app)) { opened.add(app); if (sub('look', app)) return done(); hud(); }
       const rows = appRows(G, app);
-      body.innerHTML = `<div class="bar"><button class="back">${t('phone_back')}</button><span>${loc(story.apps[app])}</span><span></span></div><div class="rows">${rows.length ? rows.map((r, i) => r.ev ? `<button data-i="${i}" class="${r.ev.found ? 'took' : ''}">${loc(r.ev.name)}<small>${loc(r.ev.desc).slice(0, 26)}…</small></button>` : `<button data-i="${i}">${loc(r.t)}<small>${loc(r.d)}</small></button>`).join('') : `<div class="detail">${t('phone_nothing')}</div>`}</div>`;
+      body.innerHTML = `<div class="bar"><button class="back">${t('phone_back')}</button><span>${loc(story.apps[app])}</span><span></span></div><div class="rows">${rows.length ? rows.map((r, i) => r.ev ? `<button data-i="${i}" class="${r.ev.found ? 'took' : ''}${r.ev.img ? ' hasimg' : ''}">${thumb(r.ev.img)}${loc(r.ev.name)}<small>${loc(r.ev.desc).slice(0, 26)}…</small></button>` : `<button data-i="${i}" class="${r.img ? 'hasimg' : ''}">${thumb(r.img)}${loc(r.t)}<small>${loc(r.d)}</small></button>`).join('') : `<div class="detail">${t('phone_nothing')}</div>`}</div>`;
       body.querySelector('.back').onclick = home;
       body.querySelectorAll('[data-i]').forEach((b) => (b.onclick = () => openRow(app, rows[+b.dataset.i])));
     };
     const openRow = (app, r) => {
       const isEv = !!r.ev;
-      body.innerHTML = `<div class="bar"><button class="back">${t('phone_back')}</button><span>${loc(story.apps[app])}</span><span></span></div><div class="detail"><h4>${loc(isEv ? r.ev.name : r.t)}</h4>${app === 'messenger' ? `<div class="msg">${loc(isEv ? r.ev.desc : r.d)}</div>` : loc(isEv ? r.ev.desc : r.d)}</div>${isEv ? `<div class="act"><button class="take" ${r.ev.found ? 'disabled' : ''}>${r.ev.found ? t('phone_took') : t('phone_take')}</button></div>` : ''}`;
+      body.innerHTML = `<div class="bar"><button class="back">${t('phone_back')}</button><span>${loc(story.apps[app])}</span><span></span></div><div class="detail"><h4>${loc(isEv ? r.ev.name : r.t)}</h4>${photo(isEv ? r.ev.img : r.img)}${app === 'messenger' ? `<div class="msg">${loc(isEv ? r.ev.desc : r.d)}</div>` : loc(isEv ? r.ev.desc : r.d)}</div>${isEv ? `<div class="act"><button class="take" ${r.ev.found ? 'disabled' : ''}>${r.ev.found ? t('phone_took') : t('phone_take')}</button></div>` : ''}`;
       body.querySelector('.back').onclick = () => openApp(app);
       const tk = body.querySelector('.take');
       if (tk && !r.ev.found) tk.onclick = () => { const stop = sub('take', r.ev.id); notes(); AU.SFX.click(); if (stop) return done(); openRow(app, { ev: G.evidence[r.ev.id] }); };
@@ -386,6 +389,14 @@ async function verdictFlow(forced = false) {
   if (r.epilogue) await epilogue(r.epilogue);
   result(r);
 }
+// 결말 그림(사용자 제작 art/user/24~30). 없는 결말은 3D 장면 그대로
+const END_CARDS = { police: 'end_police', police_colleague: 'end_police_colleague', warm: 'end_warm', phone: 'end_phone', apart: 'end_apart' };
+function endCard(kind) {
+  const el = $('endcard');
+  if (!kind || !END_CARDS[kind]) { el.classList.remove('on'); return; }
+  el.style.backgroundImage = `url(./assets/${END_CARDS[kind]}.webp)`;
+  requestAnimationFrame(() => el.classList.add('on'));
+}
 async function endFlow(kind) {
   ended = true; setBusy(true); clearSave();
   if (kind === 'dead') { H.state.dead = true; AU.bgm(null); await wait(1.2); }
@@ -393,10 +404,11 @@ async function endFlow(kind) {
   const ls = lines(`end_${kind}`);
   for (let i = 0; i < ls.length; i++) {
     if (kind === 'dead' && i === 1) AU.SFX.doorbell();
-    if (kind === 'police' || kind === 'police_colleague') { if (i === 0) { AU.SFX.knock(); AU.SFX.siren(); } }
+    if (kind === 'police' || kind === 'police_colleague') { if (i === 0) { AU.SFX.knock(); AU.SFX.siren(); endCard(kind); } }
     await show(kind === 'police' ? 'p' : 'n', ls[i], { hold: 2.6 });
   }
   const f = $('fade'); f.textContent = ''; f.style.opacity = 1; await wait(1.4);
+  endCard(null);
   result(verdict(G, null));
 }
 async function epilogue(kind) {
@@ -422,10 +434,12 @@ async function epilogue(kind) {
     setView('epiWin', 50);
   }
   await wait(0.2);
+  endCard(kind);
   f.style.opacity = 0;
   const ls = lines(`epi_${kind}`);
   for (const l of ls) { if (skip) break; const m = /^([hw]):(.*)$/s.exec(l); await show(m ? m[1] : 'n', m ? m[2] : l, { hold: 3.2 }); }
   f.style.opacity = 1; await wait(1.2);
+  endCard(null);
   document.body.classList.remove('cine');
   clearSub();
 }

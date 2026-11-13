@@ -6,6 +6,8 @@
   변환은 이 저장소의 `tools/build_human.py`(Blender 없이 numpy) → [glTF-Transform](https://gltf-transform.dev)(MIT)로 압축.
 - **three.js** r187 — MIT (`web/lib/three/LICENSE`).
 - **글꼴** — Nanum Myeongjo, EB Garamond (Google Fonts, OFL).
-- **사진 질감·키아트**: 시작 화면 키아트(`keyart*.webp`), 벽지·바닥·커튼·종이 질감, 창밖 밤·아침(`*.webp`)은 Higgsfield `gpt_image_2_6` 으로 생성(사람·상표 없음). 파일이 없으면 코드로 그린 질감으로 돌아간다.
+- **사진 질감·키아트(Higgsfield)**: 가로 키아트(`keyart.webp`), 창밖 아침(`morning.webp`), 종이 질감(`paper.webp`)은 Higgsfield `gpt_image_2_6` 으로 생성.
+- **사용자 제작 이미지(GPT Image)**: 세로 키아트(`keyart_tall.webp`), 벽지·바닥·커튼·밧줄·시계 문자판·창밖 밤(`wall/floor/curtain/rope/clock/night.webp`), 피부 모공 질감(`skin_pore.webp`), 폰 갤러리 사진(`ph_*.webp`), 결말 그림(`end_*.webp`)은 프로젝트 소유자가 만들어 제공. 남편 얼굴 수치는 소유자가 준 정면·옆모습 참고 이미지에 맞춰 조정했다(이미지 자체는 저장소에 넣지 않음).
+- 파일이 없으면 코드로 그린 질감으로 돌아간다.
 - 방 구조·소품·소리·음악은 코드로 만들었다.
 - 이 게임은 [yoshitakeapp.com 의 「浮気した夫に全部吐かせる」](https://yoshitakeapp.com/games/uwaki-jinmon/)의 공개된 구조를 분석해 **처음부터 새로 쓴 클린룸 구현**이다. 원작의 코드·대본·음성·모델·이미지는 포함하지 않는다.

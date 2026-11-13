@@ -25,6 +25,10 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
     ageTex ? new THREE.TextureLoader().loadAsync(vq(ageTex)).catch(() => null) : Promise.resolve(null),
   ]);
   if (ageMap) { ageMap.colorSpace = THREE.SRGBColorSpace; ageMap.flipY = false; }
+  // 모공 질감(사용자 제공 art/user/03): 피부 UV 를 촘촘히 반복해 결을 더한다. 읽기 전에는 회색 1px(영향 없음)
+  const poreTex = new THREE.DataTexture(new Uint8Array([168, 168, 168, 255]), 1, 1); poreTex.needsUpdate = true;
+  const U_PORE = { value: poreTex };
+  new THREE.TextureLoader().load(vq('./assets/skin_pore.webp'), (t) => { t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping; t.anisotropy = 8; U_PORE.value = t; }, undefined, () => {});
   const root = gltf.scene;
   scene.add(root);
   const bones = {};
@@ -50,8 +54,8 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
     if (/bottom$/.test(o.name)) wearBottom.push(o);
     if (/^underwear\./.test(name)) { under[o.name.startsWith('bra') ? 'bra' : 'briefs'] = o; m.roughness = 0.85; m.color.setRGB(0.045, 0.045, 0.05); o.visible = false; }
     if (/^hair\./.test(name)) {
-      m.alphaTest = 0.35; m.alphaToCoverage = true; m.transparent = false; m.side = THREE.DoubleSide;
-      m.color.multiplyScalar(0.55); m.roughness = 0.72;
+      m.alphaTest = 0.12; m.alphaToCoverage = true; m.transparent = false; m.side = THREE.DoubleSide;
+      m.color.multiply(new THREE.Color(0.2, 0.19, 0.19)); m.roughness = 0.72; // 참고 사진(01·02)처럼 짙은 흑발
       hair.push(o);
       if (/bob|long|ponytail|braid/.test(name)) m.color.setRGB(0.2, 0.15, 0.12);
     } else if (/^(eyebrows|eyelashes)\./.test(name)) {
@@ -70,13 +74,13 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
       p.name = name;
       if (envTex) { p.envMap = envTex; p.envMapIntensity = 0.5; }
       p.onBeforeCompile = (sh) => {
-        Object.assign(sh.uniforms, { uRed: U.red, uRedK: U.redK, uPale: U.pale, uWet: U.wet, uBruise: U.bruise, uWear: U.wear, uAgeMap: U.ageMap, uAgeK: U.ageK });
+        Object.assign(sh.uniforms, { uRed: U.red, uRedK: U.redK, uPale: U.pale, uWet: U.wet, uBruise: U.bruise, uWear: U.wear, uAgeMap: U.ageMap, uAgeK: U.ageK, uPore: U_PORE });
         if (ageMap) sh.defines = { ...(sh.defines || {}), AGE_MAP: '' };
         sh.vertexShader = sh.vertexShader
           .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nattribute vec2 _hide;\nvarying vec2 vHide;')
           .replace('#include <project_vertex>', '#include <project_vertex>\nvWPos = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;\nvHide = _hide;');
         sh.fragmentShader = sh.fragmentShader
-          .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec2 vHide;\nuniform vec2 uWear;\nuniform sampler2D uAgeMap;\nuniform float uAgeK;\nuniform vec3 uRed[2];\nuniform float uRedK[2];\nuniform float uPale;\nuniform float uWet;\nuniform float uBruise;')
+          .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec2 vHide;\nuniform vec2 uWear;\nuniform sampler2D uAgeMap;\nuniform float uAgeK;\nuniform vec3 uRed[2];\nuniform float uRedK[2];\nuniform float uPale;\nuniform float uWet;\nuniform float uBruise;\nuniform sampler2D uPore;\nfloat poreK = 1.0;')
           .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
 	// 옷 밑의 몸은 옷을 입은 동안 그리지 않는다(옷을 벗기면 보인다)
 	if ( ( vHide.x > 0.5 && uWear.x > 0.5 ) || ( vHide.y > 0.5 && uWear.y > 0.5 ) ) discard;`)
@@ -84,12 +88,13 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
 	#ifdef AGE_MAP
 	diffuseColor.rgb = mix( diffuseColor.rgb, texture2D( uAgeMap, vMapUv ).rgb * diffuse, uAgeK );
 	#endif
+	{ float pl = clamp( 1.0 + ( dot( texture2D( uPore, vMapUv * vec2( 36.0, 24.0 ) ).rgb, vec3( 0.3, 0.59, 0.11 ) ) / 0.735 - 1.0 ) * 6.0, 0.6, 1.4 ); poreK = pl; diffuseColor.rgb *= mix( 1.0, pl, 0.5 ); }
 	float lum = dot( diffuseColor.rgb, vec3( 0.3, 0.59, 0.11 ) );
 	diffuseColor.rgb = mix( diffuseColor.rgb, vec3( lum ) * vec3( 0.96, 0.99, 1.05 ) * 1.04, uPale * 0.6 );
 	float red = 0.0;
 	for ( int i = 0; i < 2; i ++ ) red += uRedK[ i ] * ( 1.0 - smoothstep( 0.012, 0.06, length( vWPos - uRed[ i ] ) ) );
 	diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * vec3( 1.22, 0.6, 0.56 ), clamp( red, 0.0, 1.0 ) * 0.7 );`)
-          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix( roughnessFactor, 0.22, uWet );')
+          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix( roughnessFactor * ( 1.12 - 0.12 * poreK ), 0.22, uWet );')
           .replace('#include <lights_physical_pars_fragment>', skinChunk());
       };
       o.material = p;

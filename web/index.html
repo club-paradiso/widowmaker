@@ -89,6 +89,10 @@
   body.cine #acts, body.cine #notes, body.cine #hud { display: none; }
 
   #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  #endcard { position: fixed; inset: 0; background: #000 center / cover no-repeat; opacity: 0; transition: opacity 1.4s ease; pointer-events: none; }
+  #endcard::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0, 0, 0, 0.78) 0, rgba(0, 0, 0, 0.2) 38%, transparent 60%); }
+  #endcard.on { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { #endcard { transition: none; } }
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; display: grid; place-items: center; font-family: var(--serif); font-size: 24px; color: var(--ink-l); text-align: center; padding: 0 24px; transition: opacity .8s; }
   #skip { position: fixed; right: 20px; bottom: 20px; display: none; font-size: 14px; color: var(--ink-l2); border-bottom: 1px solid var(--ink-l2); z-index: 5; }
   body.cine #skip { display: block; }
@@ -136,6 +140,10 @@
   #phoneui .rows button:last-child { border-bottom: 0; }
   #phoneui .rows button small { display: block; color: #666; font-size: 12px; margin-top: 2px; }
   #phoneui .rows button.took { color: #888; }
+  #phoneui .rows button.hasimg { display: grid; grid-template-columns: 52px 1fr; column-gap: 10px; align-items: center; }
+  #phoneui .rows button.hasimg .th { grid-row: span 2; width: 52px; height: 52px; object-fit: cover; border-radius: 6px; background: #ddd; }
+  #phoneui .rows button.hasimg small { grid-column: 2; }
+  #phoneui .detail .ph { display: block; width: 100%; border-radius: 8px; margin: 2px 0 8px; }
   #phoneui .detail { background: #fff; border-radius: 12px; padding: 12px; line-height: 1.55; min-height: 60px; }
   #phoneui .detail h4 { margin: 0 0 6px; font-size: 14.5px; }
   #phoneui .msg { background: #d9ecc9; border-radius: 14px; padding: 9px 11px; margin: 6px 0; line-height: 1.45; }
@@ -261,7 +269,7 @@
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 <script type="importmap">
-{ "imports": { "three": "./lib/three/build/three.module.js", "three/addons/": "./lib/three/examples/jsm/", "./js/version.js": "./js/version.js?v=20261113-1559", "./js/rig.js": "./js/rig.js?v=20261113-1559", "./js/lipsync.js": "./js/lipsync.js?v=20261113-1559", "./js/husband.js": "./js/husband.js?v=20261113-1559", "./js/arms.js": "./js/arms.js?v=20261113-1559", "./js/room.js": "./js/room.js?v=20261113-1559", "./js/props.js": "./js/props.js?v=20261113-1559", "./js/audio.js": "./js/audio.js?v=20261113-1559", "./js/i18n.js": "./js/i18n.js?v=20261113-1559", "./js/game.js": "./js/game.js?v=20261113-1559", "./js/clips.js": "./js/clips.js?v=20261113-1559", "./js/main.js": "./js/main.js?v=20261113-1559" } }
+{ "imports": { "three": "./lib/three/build/three.module.js", "three/addons/": "./lib/three/examples/jsm/", "./js/version.js": "./js/version.js?v=20261113-2122", "./js/rig.js": "./js/rig.js?v=20261113-2122", "./js/lipsync.js": "./js/lipsync.js?v=20261113-2122", "./js/husband.js": "./js/husband.js?v=20261113-2122", "./js/arms.js": "./js/arms.js?v=20261113-2122", "./js/room.js": "./js/room.js?v=20261113-2122", "./js/props.js": "./js/props.js?v=20261113-2122", "./js/audio.js": "./js/audio.js?v=20261113-2122", "./js/i18n.js": "./js/i18n.js?v=20261113-2122", "./js/game.js": "./js/game.js?v=20261113-2122", "./js/clips.js": "./js/clips.js?v=20261113-2122", "./js/main.js": "./js/main.js?v=20261113-2122" } }
 </script>
 </head>
 <body>
@@ -276,6 +284,7 @@
   </div>
 </div>
 <div id="notes"><h3 id="logHead"></h3><ul id="log"></ul><h3 id="eviHead"></h3><ul id="evi"></ul></div>
+<div id="endcard" aria-hidden="true"></div>
 <div id="sub" aria-live="polite"></div>
 <div id="acts"></div>
 <div id="phoneui"><div id="phonebody"></div></div>
@@ -299,6 +308,6 @@
   <div class="go"><button id="go" disabled>…</button><button id="resume" hidden></button></div>
   <p class="fiction" data-t="fiction"></p>
 </div></div>
-<script type="module" src="./js/main.js?v=20261113-1559"></script>
+<script type="module" src="./js/main.js?v=20261113-2122"></script>
 </body>
 </html>
