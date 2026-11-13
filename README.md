@@ -29,9 +29,11 @@ URL 옵션: `?lang=ko|en` `?seed=123`(같은 진상) `?fast`(10배속) `?step`(�
 | `web/js/husband.js` | 묶인 사람: 머리 위로 묶은 자세 IK, 표정(ARKit 52)·버릇·립싱크·머리 스프링·피부 상태 |
 | `web/js/arms.js`, `clips.js` | 1인칭 팔 IK와 행동별 동작 |
 | `web/js/room.js`, `props.js` | 방·소품(전부 코드로 생성) |
+| `web/js/post.js` | 화면 처리: GTAO·번짐·톤 매핑·필름 그레인·비네트. 화질 높음/가볍게/끄기(`?gfx=high|low|off`) |
 | `web/js/audio.js` | 효과음·방 소리·배경음악(WebAudio로 생성, 파일 없음) |
 | `web/js/i18n.js`, `web/data/*.json` | 한/영 문구와 대본 |
-| `tools/build_human.py` | MakeHuman CC0 자산 → GLB(Blender 없이). `build_models.sh` → `optimize.sh` |
+| `tools/build_human.py` | MakeHuman CC0 자산 → GLB(Blender 없이). 나이·근육 모프 포함. `build_models.sh` → `optimize.sh` |
+| `tools/bake_hair.py` | 몸 UV 에 털·수염 가닥과 땀 구역을 코드로 그려 `body_hair.png` 를 굽는다(나이·긴장에 따라 런타임에서 세기 조절) |
 
 모델 다시 만들기: `MPFB_DATA=… MH_ASSETS=… FACEUNITS=… tools/build_models.sh && tools/optimize.sh` (자산 위치는 CREDITS.md).
 

@@ -8,5 +8,5 @@
 - **글꼴** — Nanum Myeongjo, EB Garamond (Google Fonts, OFL).
 - **사용자 제작 이미지(GPT Image)**: 가로·세로 키아트(`keyart.webp`·`keyart_tall.webp`), 창밖 아침(`morning.webp`), 공유 미리보기(`og.png`, 키아트를 잘라 제목을 얹음), 벽지·바닥·커튼·밧줄·시계 문자판·창밖 밤(`wall/floor/curtain/rope/clock/night.webp`), 피부 모공 질감(`skin_pore.webp`), 폰 갤러리 사진(`ph_*.webp`), 결말 그림(`end_*.webp`), 종이 질감(`paper.webp`), 이혼 서류 양식(`form.webp`), 폰 잠금화면(`lock.webp`), 셔츠·바지 천(`fab_*.webp`), 아이콘(`favicon-48.png`·`apple-touch-icon.png`·`icon-512.png`)은 프로젝트 소유자가 만들어 제공. 남편 얼굴 수치는 소유자가 준 정면·옆모습 참고 이미지에 맞춰 조정했다(이미지 자체는 저장소에 넣지 않음).
 - 파일이 없으면 코드로 그린 질감으로 돌아간다.
-- 방 구조·소품·소리·음악은 코드로 만들었다.
+- 방 구조·소품·소리·음악, 털·수염·땀 지도(`body_hair.png`, `tools/bake_hair.py`), 모공 노멀맵(`skin_pore_n.webp`, 사용자 제공 모공 사진에서 계산)은 코드로 만들었다.
 - 이 게임은 [yoshitakeapp.com 의 「浮気した夫に全部吐かせる」](https://yoshitakeapp.com/games/uwaki-jinmon/)의 공개된 구조를 분석해 **처음부터 새로 쓴 클린룸 구현**이다. 원작의 코드·대본·음성·모델·이미지는 포함하지 않는다.

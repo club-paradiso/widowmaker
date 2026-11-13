@@ -153,11 +153,12 @@ def build(a):
     D = a.mpfb
     base_v, base_vt, base_f, base_g = read_obj(os.path.join(D, '3dobjs/base.obj'))
     sex = 'male' if a.sex == 'male' else 'female'
-    def shape(age):
+    def shape(age, muscle=None):
         """age: 'young'(25세) 또는 'old'(90세). 성별·근육·키·인종 매크로 + 얼굴 세부 타깃"""
         Vs = base_v.copy()
-        tgt = [(f'targets/macrodetails/universal-{sex}-{age}-averagemuscle-averageweight.target.gz', 1.0 - a.muscle),
-               (f'targets/macrodetails/universal-{sex}-{age}-maxmuscle-averageweight.target.gz', a.muscle)]
+        mu = a.muscle if muscle is None else muscle
+        tgt = [(f'targets/macrodetails/universal-{sex}-{age}-averagemuscle-averageweight.target.gz', 1.0 - mu),
+               (f'targets/macrodetails/universal-{sex}-{age}-maxmuscle-averageweight.target.gz', mu)]
         if a.height:
             tgt.append((f'targets/macrodetails/height/{sex}-{age}-averagemuscle-averageweight-maxheight.target.gz', a.height))
         for part in a.race.split(','):  # 예: asian:0.6,caucasian:0.4
@@ -172,6 +173,7 @@ def build(a):
         return Vs
     V = shape('young')
     age_delta = shape('old') - V if a.age_morph else None
+    muscle_delta = shape('young', 1.0) - V if a.muscle_morph else None  # 근육 최대까지의 차이(런타임에서 음수로 걸면 마른 쪽)
     ground = V[:, 1].min()  # 나중에 발바닥을 0 에 맞춘다(아래에서 몸 메시로 다시 잼)
 
     # 그룹별 정점
@@ -229,6 +231,8 @@ def build(a):
             morph_names.append(fn[:-7]); morph_d.append(full)
     if age_delta is not None:  # 나이 모프: 25세 → 90세 차이. 런타임에서 (나이-25)/65 만큼 건다
         morph_names.append('age'); morph_d.append(age_delta)
+    if muscle_delta is not None:
+        morph_names.append('muscle'); morph_d.append(muscle_delta)
     morph_d = np.array(morph_d) if morph_d else np.zeros((0,) + V.shape)
 
     meshes = []  # 각 원소: dict(name, pos(obj단위), uv, faces[(vi,ti)], W, morph, mat)
@@ -489,6 +493,7 @@ if __name__ == '__main__':
     ap.add_argument('--no-normal', action='store_true')
     ap.add_argument('--age-morph', action='store_true', help='25→90세 나이 모프 타깃 "age" 를 넣는다')
     ap.add_argument('--muscle', type=float, default=0.0, help='근육 0~1')
+    ap.add_argument('--muscle-morph', action='store_true', help='근육 모프 "muscle"(현재 값→최대) 를 넣는다')
     ap.add_argument('--height', type=float, default=0.0, help='키 0~1(최대 키 타깃 비율)')
     ap.add_argument('--underwear-color', default='0.16 0.16 0.18')
     ap.add_argument('--underwear-gap', type=float, default=0.035, help='속옷이 몸에서 뜨는 거리(dm)')

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """브라우저 통짜 검사(헤드리스 크롬): 시작 → 여러 행동 → 폰 뒤지기·증거 챙기기 → 증거 들이밀기 → 판결 → 결과 카드.
-콘솔 오류가 있으면 실패. 사용: python3 tests/e2e.py [base_url] [lang] [mode] [w h]"""
-import sys, time
+콘솔 오류가 있으면 실패. 사용: python3 tests/e2e.py [base_url] [lang] [mode] [w h]
+화질은 GFX 환경변수(기본 low): 소프트웨어 렌더링(SwiftShader)에서는 high 의 GTAO 가 너무 느려 클릭이 밀린다"""
+import os, sys, time
 from playwright.sync_api import sync_playwright
 base = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8765/index.html'
 lang = sys.argv[2] if len(sys.argv) > 2 else 'ko'
@@ -13,7 +14,7 @@ with sync_playwright() as p:
     pg = b.new_page(viewport={'width': W, 'height': H}, has_touch=W < 700, is_mobile=W < 700)
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
     pg.on('pageerror', lambda e: errs.append(str(e)))
-    pg.goto(f'{base}?seed=11&fast&lang={lang}&mode={mode}')
+    pg.goto(f'{base}?seed=11&fast&lang={lang}&mode={mode}&gfx={os.environ.get("GFX", "low")}')
     pg.wait_for_function('window.__ready', timeout=120000)
     pg.click('#go')
     def idle(t=120):

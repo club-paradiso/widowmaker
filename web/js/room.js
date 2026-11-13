@@ -143,8 +143,10 @@ export function makeRoom(scene) {
   const shade = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.18, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0x2b2420, roughness: 0.5, side: THREE.DoubleSide, emissive: 0x120c08 }));
   shade.position.set(0.62, H - 0.5, -0.15); R.group.add(shade);
   const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.42, 6), new THREE.MeshBasicMaterial({ color: 0x111111 })); cord.position.set(0.62, H - 0.21, -0.15); R.group.add(cord);
-  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffe2b0 })); bulb.position.set(0.62, H - 0.58, -0.15); R.group.add(bulb);
-  const key = new THREE.SpotLight(0xffd6a0, 26, 7, 0.95, 0.65, 1.6);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe2b0).multiplyScalar(7) })); // 화면 처리의 번짐(bloom)이 잡을 만큼 밝게 bulb.position.set(0.62, H - 0.58, -0.15); R.group.add(bulb);
+  // 세기 20: 화면 처리(톤 매핑·번짐)가 들어가며 26 이면 조명 쪽 피부가 하얗게 탔다
+  const KEY = 20; R.keyBase = KEY;
+  const key = new THREE.SpotLight(0xffd6a0, KEY, 7, 0.95, 0.65, 1.6);
   key.position.set(0.6, H - 0.6, -0.1); key.target.position.set(0, 1.3, 0.2);
   key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.camera.near = 0.1;
   R.group.add(key, key.target); R.lights.key = key; R.bulb = bulb;
@@ -152,7 +154,7 @@ export function makeRoom(scene) {
   const amb = new THREE.HemisphereLight(0x8a7a6a, 0x1a120c, 0.25); R.group.add(amb); R.lights.amb = amb;
   // 아침(결말 뒤 장면)
   R.setMorning = (on) => {
-    key.intensity = on ? 6 : 26; bulb.visible = !on;
+    key.intensity = on ? 6 : KEY; bulb.visible = !on;
     moon.color.set(on ? 0xfff0d8 : 0x6f8fd0); moon.intensity = on ? 2.6 : 0.25; moon.castShadow = on;
     amb.intensity = on ? 0.9 : 0.25; amb.color.set(on ? 0xe8eef8 : 0x8a7a6a);
     fill.intensity = on ? 0.6 : 1.6;

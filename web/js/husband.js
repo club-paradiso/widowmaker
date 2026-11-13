@@ -8,6 +8,7 @@ import { vq } from './version.js';
 import { syllables } from './lipsync.js';
 
 const DEG = Math.PI / 180;
+const blank1 = (r, g, b, a) => { const t = new THREE.DataTexture(new Uint8Array([r, g, b, a]), 1, 1); t.needsUpdate = true; return t; };
 
 // 피부: 빛이 피부 안으로 조금 번지는 부드러운 음영(SSS 흉내)
 function skinChunk() {
@@ -40,7 +41,10 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
   const U = {
     red: { value: [V3(), V3()] }, redK: { value: [0, 0] }, pale: { value: 0 }, wet: { value: 0 }, bruise: { value: 0 },
     wear: { value: new THREE.Vector2(1, 1) }, ageMap: { value: ageMap }, ageK: { value: 0 },
+    hair: { value: blank1(0, 0, 0, 0) }, hairK: { value: 0.5 }, beardK: { value: 0.4 }, hairGrey: { value: 0 }, sweat: { value: 0 },
   };
+  // 털·수염·땀 구역 지도(tools/bake_hair.py 로 구움): R 몸 털, G 수염, B 땀 구역, A 수염 그늘
+  new THREE.TextureLoader().load(vq('./assets/body_hair.png'), (t) => { t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.anisotropy = 8; U.hair.value = t; }, undefined, () => {});
   const morphMeshes = [], hair = [], wearTop = [], wearBottom = [], under = { briefs: null, bra: null };
   let skin = null;
   root.traverse((o) => {
@@ -82,15 +86,18 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
         sheenColor: new THREE.Color(1.0, 0.8, 0.72), color: new THREE.Color(0.97, 0.92, 0.9),
       });
       p.name = name;
+      // 모공 요철(사용자 제공 art/user/03 에서 만든 노멀맵). 몸 UV 를 촘촘히 반복한다
+      p.normalScale = new THREE.Vector2(0.45, 0.45);
+      new THREE.TextureLoader().load(vq('./assets/skin_pore_n.webp'), (t) => { t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping; t.repeat.set(36, 24); t.anisotropy = 8; p.normalMap = t; p.needsUpdate = true; }, undefined, () => {});
       if (envTex) { p.envMap = envTex; p.envMapIntensity = 0.5; }
       p.onBeforeCompile = (sh) => {
-        Object.assign(sh.uniforms, { uRed: U.red, uRedK: U.redK, uPale: U.pale, uWet: U.wet, uBruise: U.bruise, uWear: U.wear, uAgeMap: U.ageMap, uAgeK: U.ageK, uPore: U_PORE });
+        Object.assign(sh.uniforms, { uRed: U.red, uRedK: U.redK, uPale: U.pale, uWet: U.wet, uBruise: U.bruise, uWear: U.wear, uAgeMap: U.ageMap, uAgeK: U.ageK, uPore: U_PORE, uHair: U.hair, uHairK: U.hairK, uBeardK: U.beardK, uHairGrey: U.hairGrey, uSweat: U.sweat });
         if (ageMap) sh.defines = { ...(sh.defines || {}), AGE_MAP: '' };
         sh.vertexShader = sh.vertexShader
           .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nattribute vec2 _hide;\nvarying vec2 vHide;')
           .replace('#include <project_vertex>', '#include <project_vertex>\nvWPos = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;\nvHide = _hide;');
         sh.fragmentShader = sh.fragmentShader
-          .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec2 vHide;\nuniform vec2 uWear;\nuniform sampler2D uAgeMap;\nuniform float uAgeK;\nuniform vec3 uRed[2];\nuniform float uRedK[2];\nuniform float uPale;\nuniform float uWet;\nuniform float uBruise;\nuniform sampler2D uPore;\nfloat poreK = 1.0;')
+          .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec2 vHide;\nuniform vec2 uWear;\nuniform sampler2D uAgeMap;\nuniform float uAgeK;\nuniform vec3 uRed[2];\nuniform float uRedK[2];\nuniform float uPale;\nuniform float uWet;\nuniform float uBruise;\nuniform sampler2D uPore;\nfloat poreK = 1.0;\nuniform sampler2D uHair;\nuniform float uHairK;\nuniform float uBeardK;\nuniform float uHairGrey;\nuniform float uSweat;\nfloat wetL = 0.0;\nfloat drop = 0.0;\nfloat hairA = 0.0;')
           .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
 	// 옷 밑의 몸은 옷을 입은 동안 그리지 않는다(옷을 벗기면 보인다)
 	if ( ( vHide.x > 0.5 && uWear.x > 0.5 ) || ( vHide.y > 0.5 && uWear.y > 0.5 ) ) discard;`)
@@ -99,12 +106,25 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
 	diffuseColor.rgb = mix( diffuseColor.rgb, texture2D( uAgeMap, vMapUv ).rgb * diffuse, uAgeK );
 	#endif
 	{ float pl = clamp( 1.0 + ( dot( texture2D( uPore, vMapUv * vec2( 36.0, 24.0 ) ).rgb, vec3( 0.3, 0.59, 0.11 ) ) / 0.735 - 1.0 ) * 6.0, 0.6, 1.4 ); poreK = pl; diffuseColor.rgb *= mix( 1.0, pl, 0.5 ); }
+	// 털·수염(나이에 따라 세기), 수염 그늘, 땀
+	{ vec4 hm = texture2D( uHair, vMapUv );
+	  hairA = clamp( hm.r * uHairK + hm.g * uBeardK, 0.0, 1.0 );
+	  vec3 hairC = mix( vec3( 0.032, 0.026, 0.022 ), vec3( 0.42, 0.40, 0.38 ), uHairGrey );
+	  diffuseColor.rgb *= 1.0 - hm.a * uBeardK * 0.18;
+	  diffuseColor.rgb = mix( diffuseColor.rgb, hairC, hairA * 0.88 );
+	  wetL = clamp( uWet + uSweat * hm.b, 0.0, 1.0 );
+	  vec2 dc = vMapUv * 300.0; vec2 ci = floor( dc ); vec2 cf = fract( dc ) - 0.5;
+	  float rn = fract( sin( dot( ci, vec2( 127.1, 311.7 ) ) ) * 43758.5453 );
+	  vec2 off = vec2( fract( rn * 17.3 ), fract( rn * 31.7 ) ) - 0.5;
+	  float rad = 0.16 + 0.18 * fract( rn * 7.1 );
+	  drop = step( rn, wetL * 0.6 ) * smoothstep( rad, rad * 0.45, length( cf - off * 0.45 ) );
+	  diffuseColor.rgb *= 1.0 - wetL * 0.07; }
 	float lum = dot( diffuseColor.rgb, vec3( 0.3, 0.59, 0.11 ) );
 	diffuseColor.rgb = mix( diffuseColor.rgb, vec3( lum ) * vec3( 0.96, 0.99, 1.05 ) * 1.04, uPale * 0.6 );
 	float red = 0.0;
 	for ( int i = 0; i < 2; i ++ ) red += uRedK[ i ] * ( 1.0 - smoothstep( 0.012, 0.06, length( vWPos - uRed[ i ] ) ) );
 	diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * vec3( 1.22, 0.6, 0.56 ), clamp( red, 0.0, 1.0 ) * 0.7 );`)
-          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix( roughnessFactor * ( 1.12 - 0.12 * poreK ), 0.22, uWet );')
+          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix( roughnessFactor * ( 1.12 - 0.12 * poreK ), 0.24, wetL );\nroughnessFactor = mix( roughnessFactor, 0.05, drop );\nroughnessFactor = mix( roughnessFactor, 0.8, hairA );')
           .replace('#include <lights_physical_pars_fragment>', skinChunk());
       };
       o.material = p;
@@ -349,16 +369,17 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
       }
     }
     out.age = AGE.k;
-    // 적용(0~1)
+    // 적용(0~1). 근육만 -1~1(음수 = 기본보다 마른 쪽)
     for (const m of morphMeshes) {
       const dict = m.morphTargetDictionary, inf = m.morphTargetInfluences;
       for (let i = 0; i < inf.length; i++) inf[i] = 0;
       for (const [n, v] of Object.entries(out)) { const i = dict[n]; if (i !== undefined) inf[i] = clamp(v); }
+      if (dict.muscle !== undefined) inf[dict.muscle] = Math.max(-1, Math.min(1, AGE.muscle));
     }
   }
 
   // ---------- 피부 상태
-  const SK = { red: [0, 0], redGoal: [0, 0], pale: 0, paleGoal: 0, wet: 0 };
+  const SK = { red: [0, 0], redGoal: [0, 0], pale: 0, paleGoal: 0, wet: 0, sweat: 0, sweatGoal: 0 };
   H.skinState = SK;
   H.slapMark = (side, k = 0.6) => { const i = side === 'L' ? 0 : 1; SK.redGoal[i] = clamp(SK.redGoal[i] + k, 0, 1); };
   H.setPale = (k) => { SK.paleGoal = clamp(k); };
@@ -420,12 +441,20 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
   };
   H.clothes = () => ({ ...WEAR });
   H.setClothes();
-  const AGE = { k: 0, skin: 0 };
+  const AGE = { k: 0, skin: 0, muscle: 0 };
   H.setAge = (age) => {
     AGE.k = Math.max(0, (age - 25) / 65); // MakeHuman: 25세 → 90세 사이
     U.ageK.value = Math.min(1, Math.max(0, (age - 30) / 16)) * 0.85; // 30대 중반부터 중년 피부 쪽으로
     for (const h of hair) { const g = Math.max(0, (age - 38) / 12) * 0.35; h.userData.grey = g; }
+    // 나이에 따라: 20대는 매끈하고 마른 편, 40대로 갈수록 털·수염이 짙어지고 몸이 두꺼워진다(설계 판단)
+    const t = Math.min(1, Math.max(0, (age - 20) / 25));
+    U.hairK.value = 0.12 + 0.88 * t;
+    U.beardK.value = 0.18 + 0.72 * t;
+    U.hairGrey.value = Math.max(0, (age - 40) / 20) * 0.45;
+    AGE.muscle = -0.35 + 1.1 * t;
   };
+  // 땀(0~1): 긴장·고통·버틴 시간에 따라 main 이 올린다. 목·가슴·겨드랑이·이마부터 맺힌다
+  H.setSweat = (k) => { SK.sweatGoal = clamp(k); };
 
   // ---------- 매 프레임
   H.update = (dt) => {
@@ -437,7 +466,8 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
     SK.wet = Math.max(0, SK.wet - dt * 0.01);
     U.redK.value[0] = SK.red[0]; U.redK.value[1] = SK.red[1];
     H.point('cheekL', U.red.value[0]); H.point('cheekR', U.red.value[1]);
-    U.pale.value = SK.pale; U.wet.value = SK.wet;
+    SK.sweat = damp(SK.sweat, SK.sweatGoal, 0.25, dt);
+    U.pale.value = SK.pale; U.wet.value = SK.wet; U.sweat.value = SK.sweat;
     for (const h of hair) {
       h.material.roughness = lerp(0.72, 0.3, SK.wet);
       if (h.userData.base === undefined) h.userData.base = h.material.color.clone();

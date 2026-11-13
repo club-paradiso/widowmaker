@@ -9,6 +9,7 @@ import { t, line, lines, loc, store } from './i18n.js';
 import { loadHusband } from './husband.js';
 import { loadArms } from './arms.js';
 import { makeRoom } from './room.js';
+import { makePost, defaultQuality } from './post.js';
 import { makeClips } from './clips.js';
 import * as P from './props.js';
 import * as AU from './audio.js';
@@ -22,6 +23,7 @@ const MODE = I18N.pickMode();
 const story = await I18N.load(undefined, MODE);
 const faces = await fetch(vq('./data/faces.json')).then((r) => r.json());
 const SAVE_KEY = 'wm_save';
+const START_MIN = 22 * 60; // 게임 시작 시각(22:00)
 
 // ---------------------------------------------------------------- 3D
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: q.has('shot') });
@@ -39,8 +41,13 @@ scene.environment = envTex;
 scene.environmentIntensity = 0.18;
 const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.03, 40);
 const fitFov = (aspect) => (aspect >= 1 ? 48 : Math.min(48 * 1.45, (2 * Math.atan(Math.tan((48 * Math.PI) / 360) / aspect) * 180) / Math.PI));
-addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.fov = fitFov(camera.aspect); camera.updateProjectionMatrix(); layoutSub(); });
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); post.resize(); camera.aspect = innerWidth / innerHeight; camera.fov = fitFov(camera.aspect); camera.updateProjectionMatrix(); layoutSub(); });
 camera.fov = fitFov(innerWidth / innerHeight); camera.updateProjectionMatrix();
+// 화면 처리(화질): ?gfx=high|low|off 가 우선, 다음은 저장값, 없으면 기기에 맞춰
+const post = makePost(renderer, scene, camera);
+const GFX = ['high', 'low', 'off'];
+const gfx0 = q.get('gfx') || store.get('wm_gfx') || defaultQuality();
+post.set(GFX.includes(gfx0) ? gfx0 : 'high');
 
 THREE.DefaultLoadingManager.onProgress = (url, n, total) => { $('go').textContent = `${t('loading')} ${Math.round((n / Math.max(1, total)) * 100)}%`; };
 const room = makeRoom(scene);
@@ -55,7 +62,7 @@ const fx = {
   flash: (k) => { if (CALM) return; const f = $('flash'); f.style.transition = 'none'; f.style.opacity = k; requestAnimationFrame(() => { f.style.transition = 'opacity .35s'; f.style.opacity = 0; }); },
   shake: (k) => { if (!CALM) shakeAmp = Math.max(shakeAmp, k); },
   tick: (fn) => fxTicks.push(fn),
-  lamp: (k) => { room.lights.key.intensity = 26 * k; },
+  lamp: (k) => { room.lights.key.intensity = room.keyBase * k; },
 };
 // 소품 상태
 let blindObj = null, toolboxObj = null, recorderObj = null;
@@ -137,6 +144,8 @@ function staticTexts() {
 staticTexts();
 document.querySelectorAll('#langRow button').forEach((b) => (b.onclick = () => { store.set('wm_lang', b.dataset.lang); const u = new URL(location.href); u.searchParams.set('lang', b.dataset.lang); location.href = u.toString(); }));
 $('hname').value = store.get('wm_name') || '';
+{ const box = $('gfxBox'); const paint = () => box.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.q === post.mode)));
+  box.querySelectorAll('button').forEach((b) => (b.onclick = () => { post.set(b.dataset.q); store.set('wm_gfx', b.dataset.q); paint(); })); paint(); }
 { const a = $('age'); a.value = store.get('wm_age') || 32; const show = () => { $('ageOut').textContent = t('ageUnit', { n: a.value }); H.setAge(+a.value); }; a.oninput = show; show(); }
 { const v = JSON.parse(store.get('wm_vol') || '{}'); for (const k of ['se', 'amb', 'bgm']) { const val = v[k] ?? AU.volumes()[k]; $(`vol_${k}`).value = Math.round(val * 100); AU.setVolume(k, val); $(`vol_${k}`).oninput = (e) => { AU.setVolume(k, e.target.value / 100); store.set('wm_vol', JSON.stringify(AU.volumes())); }; } }
 
@@ -162,6 +171,8 @@ function hud() {
   H.state.sag = Math.min(1, Math.max(0, (70 - G.hp) / 70) + (G.strain > 80 ? 0.2 : 0));
   H.state.tremble = Math.max(0, (G.strain - 40) / 60);
   H.setPale(Math.max(0, (75 - G.hp) / 90));
+  // 땀: 팔이 버티는 부담·고통·공포·긴장과 흐른 시간이 쌓일수록
+  H.setSweat(Math.min(1, 0.12 + G.strain / 140 + G.pain / 180 + G.fear / 260 + G.stress / 300 + Math.max(0, (G.min - START_MIN) / 900)));
   H.face.mouthShut = false;
   idleFace();
 }
@@ -317,7 +328,7 @@ async function playEvents(id, evs) {
 async function leaveFlow() {
   const f = $('fade'); f.textContent = ''; f.style.opacity = 1; room.lights.key.intensity = 0;
   await wait(1.6);
-  room.lights.key.intensity = 26; f.style.opacity = 0;
+  room.lights.key.intensity = room.keyBase; f.style.opacity = 0;
   await wait(0.8);
 }
 
@@ -539,7 +550,7 @@ function tick(dt) {
   A.update(dt);
   for (let i = fxTicks.length - 1; i >= 0; i--) if (fxTicks[i](dt) === false) fxTicks.splice(i, 1);
   if (recorderObj && recorderObj.visible) recorderObj.userData.dot.visible = Math.floor(performance.now() / 600) % 2 === 0;
-  renderer.render(scene, camera);
+  post.render(dt);
 }
 if (q.has('step')) window.__step = (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++) tick(dt); };
 else renderer.setAnimationLoop(() => { const now = performance.now(); const dt = Math.min(0.05, (now - last) / 1000); last = now; tick(dt); });
@@ -547,6 +558,7 @@ else renderer.setAnimationLoop(() => { const now = performance.now(); const dt =
 // 확인용
 window.__act = (id, arg) => perform(id, arg);
 window.__G = () => G;
+window.__H = () => H;
 window.__view = (v) => setView(v, 50);
 window.__clip = (name, ...a) => runClip(C[name](...a));
 window.__begin = begin;

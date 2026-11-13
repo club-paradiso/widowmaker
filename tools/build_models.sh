@@ -13,7 +13,7 @@ HANDSOME="chin/chin-prominent-incr=0.4 chin/chin-width-incr=0.1 chin/chin-height
   eyebrows/eyebrows-trans-down=0.25 neck/neck-scale-horiz-incr=0.2 head/head-oval=0.5 head/head-scale-vert-incr=0.2"
 TGT=(); for t in $HANDSOME; do TGT+=(--target "$t"); done
 python3 -I tools/build_human.py --mpfb "$MPFB_DATA" --assets "$S" --faceunits "$FACEUNITS" --out work/husband_raw.glb \
-  --sex male --race asian:0.72,caucasian:0.28 --muscle 0.5 --height 0.35 --age-morph "${TGT[@]}" \
+  --sex male --race asian:0.72,caucasian:0.28 --muscle 0.5 --height 0.35 --age-morph --muscle-morph "${TGT[@]}" \
   --skin "$S/skins/young_asian_male/young_asian_male.mhmat" \
   --proxy clothes male_casualsuit03 - --proxy hair short02 - --proxy eyebrows eyebrow008 - --proxy eyelashes eyelashes01 - \
   --proxy eyes high-poly "$S/eyes/materials/brown.mhmat" --proxy teeth teeth_base - --proxy tongue tongue01 - --proxy clothes shoes02 -

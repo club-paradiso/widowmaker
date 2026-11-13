@@ -572,5 +572,21 @@
  "bottomOff": {
   "ko": "하의 없음",
   "en": "No pants"
+ },
+ "gfx": {
+  "ko": "화질",
+  "en": "Graphics"
+ },
+ "gfx_high": {
+  "ko": "높음",
+  "en": "High"
+ },
+ "gfx_low": {
+  "ko": "가볍게",
+  "en": "Light"
+ },
+ "gfx_off": {
+  "ko": "끄기",
+  "en": "Off"
  }
 }
