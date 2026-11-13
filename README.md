@@ -35,4 +35,4 @@ URL 옵션: `?lang=ko|en` `?mode=h|w` `?seed=123`(같은 진상) `?fast`(10배�
 
 모델 다시 만들기: `MPFB_DATA=… MH_ASSETS=… FACEUNITS=… tools/build_models.sh && tools/optimize.sh` (자산 위치는 CREDITS.md).
 
-배포: 정적 사이트(`web/`). 올리기 전에 `npm run bump`.
+배포: main 에 푸시하면 GitHub Actions 가 `web/` 을 GitHub Pages 로 올린다 → https://club-paradiso.github.io/widowmaker/ (올리기 전에 `npm run bump`).
