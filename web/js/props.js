@@ -5,6 +5,11 @@ const M = (c, r = 0.5, m = 0, e) => new THREE.MeshStandardMaterial({ color: c, r
 const shadow = (g) => { g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); return g; };
 
 // 스마트폰(14.7×7.1cm). 화면은 손바닥 반대쪽(-Z)을 본다 → 쥔 사람이 아니라 앞사람에게 보여주는 방향은 클립이 정한다
+let _lock = null;
+const lockTex = () => { if (!_lock) { _lock = new THREE.TextureLoader().load('./assets/lock.webp'); _lock.colorSpace = THREE.SRGBColorSpace; } return _lock; };
+// 이혼 서류 양식(사용자 제작 art/user/13). 그림을 읽기 전에는 캔버스로 그린 칸만 보인다
+let _form = null;
+const formImg = () => { if (!_form) { _form = new Image(); _form.src = './assets/form.webp'; } return _form; };
 export function phone() {
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.071, 0.147, 0.008), M(0x1a1a1c, 0.3, 0.6));
@@ -13,7 +18,8 @@ export function phone() {
   scr.position.z = -0.0042; scr.rotation.y = Math.PI; g.add(scr);
   g.userData.screen = scr;
   g.position.set(0, 0.02, 0.012);
-  g.userData.setGlow = (on, color = 0xe9f0ff) => { scr.material.color.set(on ? color : 0x0b0b0e); };
+  // 켜지면 잠금화면(사용자 제작 art/user/14: 결혼사진 뒷모습)이 보인다
+  g.userData.setGlow = (on, color = 0xe9f0ff) => { scr.material.map = on ? lockTex() : null; scr.material.color.set(on ? color : 0x0b0b0e); scr.material.needsUpdate = true; };
   return shadow(g);
 }
 // 물컵
@@ -55,14 +61,22 @@ export function toolbox() {
 export function paper(title = '협의이혼의사확인신청서') {
   const c = document.createElement('canvas'); c.width = 420; c.height = 594;
   const x = c.getContext('2d');
-  x.fillStyle = '#f7f4ec'; x.fillRect(0, 0, 420, 594);
-  x.fillStyle = '#222'; x.font = 'bold 26px serif'; x.textAlign = 'center'; x.fillText(title, 210, 70);
-  x.strokeStyle = '#555'; x.lineWidth = 1.2;
-  for (let i = 0; i < 9; i++) { x.strokeRect(40, 110 + i * 46, 340, 40); }
-  x.font = '15px serif'; x.textAlign = 'left';
-  ['성명', '주민등록번호', '주소', '등록기준지', '혼인신고일', '자녀', '친권자', '양육비', '서명'].forEach((s, i) => x.fillText(s, 50, 136 + i * 46));
-  x.strokeStyle = '#b22'; x.lineWidth = 2; x.beginPath(); x.arc(330, 504, 16, 0, Math.PI * 2); x.stroke();
+  const labels = ['성명', '주민등록번호', '주소', '등록기준지', '혼인신고일', '자녀', '친권자', '양육비', '위자료', '재산분할', '협의일', '서명'];
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const draw = (img) => {
+    if (img) x.drawImage(img, 0, 0, 420, 594);
+    else { x.fillStyle = '#f2f1ee'; x.fillRect(0, 0, 420, 594); x.strokeStyle = '#555'; x.lineWidth = 1; x.strokeRect(19, 36, 382, 525); }
+    x.fillStyle = '#1d1d1d'; x.font = 'bold 19px serif'; x.textAlign = 'center'; x.fillText(title, 210, 26);
+    // 양식 칸(그림 기준 420px 폭): 열 경계 x=19·110·308·401, 첫 줄 y=36~68, 이후 41.1px 간격 12줄
+    x.font = 'bold 12px serif'; x.textAlign = 'center';
+    [['항목', 64], ['내용', 209], ['확인', 355]].forEach(([s, cx]) => x.fillText(s, cx, 56));
+    x.font = '13px serif';
+    labels.forEach((s, i) => x.fillText(s, 64, 93 + i * 41.1));
+    x.strokeStyle = '#b22'; x.lineWidth = 2; x.beginPath(); x.arc(355, 540, 13, 0, Math.PI * 2); x.stroke();
+    t.needsUpdate = true;
+  };
+  const img = formImg();
+  if (img.complete && img.naturalWidth) draw(img); else { draw(null); img.addEventListener('load', () => draw(img), { once: true }); }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(0.21, 0.297), new THREE.MeshStandardMaterial({ map: t, roughness: 0.9, side: THREE.DoubleSide }));
   const g = new THREE.Group(); m.position.y = 0.11; m.position.z = 0.005; g.add(m);
   return shadow(g);

@@ -66,6 +66,16 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
       m.envMapIntensity = 0.05; m.roughness = 0.5; m.color.multiply(new THREE.Color(0.7, 0.66, 0.6));
     } else if (/^clothes\./.test(name)) {
       m.roughness = 0.88;
+      // 머리 위 펜던트와 든 팔이 가까워 소매에 생기는 자기 그림자의 톱니 경계가 찢어진 천처럼 보였다 → 옷은 그림자를 받지 않는다(던지는 것은 유지)
+      o.receiveShadow = false;
+      // 셔츠·바지 천(사용자 제작 art/user/11·12): 원래 줄무늬 셔츠·청바지 무늬를 옅은 하늘색 옥스퍼드 셔츠·차콜 바지로 바꾼다. 신발은 그대로
+      const fab = /suit/.test(name) ? (/top$/.test(o.name) ? 'fab_shirt' : /bottom$/.test(o.name) ? 'fab_trouser' : null) : null;
+      if (fab) {
+        const c = m.clone(); o.material = c; c.color.setRGB(0.8, 0.8, 0.82);
+        // 펜던트 바로 아래라 밝은 천이 하얗게 타지 않게 밝은 쪽만 부드럽게 눌러 준다(색은 유지)
+        c.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <tonemapping_fragment>', '{ float L = max( max( gl_FragColor.r, gl_FragColor.g ), gl_FragColor.b ); if ( L > 0.0 ) gl_FragColor.rgb *= ( 1.7 * L / ( 1.0 + 1.7 * L ) ) / L; }\n#include <tonemapping_fragment>'); };
+        new THREE.TextureLoader().load(vq(`./assets/${fab}.webp`), (t) => { t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping; t.repeat.set(3, 3); t.anisotropy = 8; c.map = t; c.needsUpdate = true; }, undefined, () => {});
+      }
     } else if (/^body\./.test(name)) {
       const p = new THREE.MeshPhysicalMaterial({
         map: m.map, roughness: 0.62, metalness: 0, ior: 1.4, sheen: 0.25, sheenRoughness: 0.7,

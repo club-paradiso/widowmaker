@@ -11,7 +11,8 @@
 <meta property="og:image" content="https://club-paradiso.github.io/widowmaker/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b0a09">
-<link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+<link rel="icon" href="./assets/favicon-48.png" type="image/png" sizes="48x48">
+<link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -131,6 +132,10 @@
   #phoneui.note { top: auto; bottom: 240px; right: 16%; transform: none; width: 256px; }
   #phoneui .bar { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #555; margin-bottom: 8px; min-height: 20px; }
   #phoneui .bar button { color: #333; font-size: 13px; padding: 2px 4px; }
+  #phoneui:has(.home) { background: linear-gradient(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.42)), #3a3340 url("./assets/lock.webp") center / cover; }
+  #phoneui:has(.home) .bar { color: #f2eee8; }
+  #phoneui:has(.home) .home button { color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+  #phoneui:has(.home) .home button i { background: rgba(244, 241, 236, 0.92); }
   #phoneui .home { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 6px; margin: 12px 0 16px; }
   #phoneui .home button { display: grid; justify-items: center; gap: 5px; font-size: 11.5px; color: #1b1b1b; }
   #phoneui .home button i { font-style: normal; width: 50px; height: 50px; border-radius: 13px; display: grid; place-items: center; font-size: 24px; background: #e2e0db; }
@@ -269,7 +274,7 @@
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 <script type="importmap">
-{ "imports": { "three": "./lib/three/build/three.module.js", "three/addons/": "./lib/three/examples/jsm/", "./js/version.js": "./js/version.js?v=20261113-2122", "./js/rig.js": "./js/rig.js?v=20261113-2122", "./js/lipsync.js": "./js/lipsync.js?v=20261113-2122", "./js/husband.js": "./js/husband.js?v=20261113-2122", "./js/arms.js": "./js/arms.js?v=20261113-2122", "./js/room.js": "./js/room.js?v=20261113-2122", "./js/props.js": "./js/props.js?v=20261113-2122", "./js/audio.js": "./js/audio.js?v=20261113-2122", "./js/i18n.js": "./js/i18n.js?v=20261113-2122", "./js/game.js": "./js/game.js?v=20261113-2122", "./js/clips.js": "./js/clips.js?v=20261113-2122", "./js/main.js": "./js/main.js?v=20261113-2122" } }
+{ "imports": { "three": "./lib/three/build/three.module.js", "three/addons/": "./lib/three/examples/jsm/", "./js/version.js": "./js/version.js?v=20261113-2224", "./js/rig.js": "./js/rig.js?v=20261113-2224", "./js/lipsync.js": "./js/lipsync.js?v=20261113-2224", "./js/husband.js": "./js/husband.js?v=20261113-2224", "./js/arms.js": "./js/arms.js?v=20261113-2224", "./js/room.js": "./js/room.js?v=20261113-2224", "./js/props.js": "./js/props.js?v=20261113-2224", "./js/audio.js": "./js/audio.js?v=20261113-2224", "./js/i18n.js": "./js/i18n.js?v=20261113-2224", "./js/game.js": "./js/game.js?v=20261113-2224", "./js/clips.js": "./js/clips.js?v=20261113-2224", "./js/main.js": "./js/main.js?v=20261113-2224" } }
 </script>
 </head>
 <body>
@@ -308,6 +313,6 @@
   <div class="go"><button id="go" disabled>…</button><button id="resume" hidden></button></div>
   <p class="fiction" data-t="fiction"></p>
 </div></div>
-<script type="module" src="./js/main.js?v=20261113-2122"></script>
+<script type="module" src="./js/main.js?v=20261113-2224"></script>
 </body>
 </html>
