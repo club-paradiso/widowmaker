@@ -69,3 +69,5 @@ for (const [name, pol] of Object.entries({ gentle, brutal, random })) {
 // 아내판도 돌아가는지
 const w = play(merged, 5, random); assert.ok(w.v.rank);
 console.log('아내판 OK');
+// 평소 질문의 대답은 a(답 id)를 넘겨야 대사가 비지 않는다
+{ const s = newGame(story, 3); const ev = act(s, 'baseline').find((e) => e.key === 'baseline_a'); assert.ok(ev.vars.a, 'baseline_a 에 a 없음'); console.log('평소 질문 대답 OK'); }

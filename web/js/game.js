@@ -219,7 +219,7 @@ export function act(s, id, arg) {
       const q = baselineQ(s);
       say(out, 'w', 'baseline_q', { q: q.id });
       const t = showTells(s, false);
-      say(out, 'h', 'baseline_a', { q: q.id }, { face: s.fear > 55 ? 'afraid' : 'nervous', tells: t });
+      say(out, 'h', 'baseline_a', { q: q.id, a: q.id }, { face: s.fear > 55 ? 'afraid' : 'nervous', tells: t });
       s.baseline++;
       break;
     }

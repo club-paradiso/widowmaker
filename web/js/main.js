@@ -317,6 +317,8 @@ async function phoneFlow() {
   const ui = $('phoneui'), body = $('phonebody');
   ui.className = 'on';
   const opened = new Set();
+  let pending = []; // 폰 안의 행동이 아침·결말을 넘기면 폰을 닫고 처리한다
+  const sub = (id, arg) => { ACTS.push([id, arg]); const evs = act(G, id, arg); saveGame(); pending.push(...evs.filter((e) => e.t === 'morning' || e.t === 'end')); return pending.length > 0; };
   await new Promise((done) => {
     const home = () => {
       body.innerHTML = `<div class="bar"><span>9:41</span><span>${clock(G)}</span></div><div class="home">${Object.entries(story.apps).map(([k, a]) => `<button data-app="${k}" class="${opened.has(k) ? 'opened' : ''}"><i>${a.icon}</i>${loc(a)}</button>`).join('')}</div><button class="ret">${t('phone_close')}</button>`;
@@ -324,7 +326,7 @@ async function phoneFlow() {
       body.querySelector('.ret').onclick = () => done();
     };
     const openApp = async (app) => {
-      if (!opened.has(app)) { opened.add(app); ACTS.push(['look', app]); act(G, 'look', app); saveGame(); hud(); }
+      if (!opened.has(app)) { opened.add(app); if (sub('look', app)) return done(); hud(); }
       const rows = appRows(G, app);
       body.innerHTML = `<div class="bar"><button class="back">${t('phone_back')}</button><span>${loc(story.apps[app])}</span><span></span></div><div class="rows">${rows.length ? rows.map((r, i) => r.ev ? `<button data-i="${i}" class="${r.ev.found ? 'took' : ''}">${loc(r.ev.name)}<small>${loc(r.ev.desc).slice(0, 26)}…</small></button>` : `<button data-i="${i}">${loc(r.t)}<small>${loc(r.d)}</small></button>`).join('') : `<div class="detail">${t('phone_nothing')}</div>`}</div>`;
       body.querySelector('.back').onclick = home;
@@ -335,21 +337,22 @@ async function phoneFlow() {
       body.innerHTML = `<div class="bar"><button class="back">${t('phone_back')}</button><span>${loc(story.apps[app])}</span><span></span></div><div class="detail"><h4>${loc(isEv ? r.ev.name : r.t)}</h4>${app === 'messenger' ? `<div class="msg">${loc(isEv ? r.ev.desc : r.d)}</div>` : loc(isEv ? r.ev.desc : r.d)}</div>${isEv ? `<div class="act"><button class="take" ${r.ev.found ? 'disabled' : ''}>${r.ev.found ? t('phone_took') : t('phone_take')}</button></div>` : ''}`;
       body.querySelector('.back').onclick = () => openApp(app);
       const tk = body.querySelector('.take');
-      if (tk && !r.ev.found) tk.onclick = () => { ACTS.push(['take', r.ev.id]); act(G, 'take', r.ev.id); saveGame(); notes(); AU.SFX.click(); openRow(app, { ev: G.evidence[r.ev.id] }); };
+      if (tk && !r.ev.found) tk.onclick = () => { const stop = sub('take', r.ev.id); notes(); AU.SFX.click(); if (stop) return done(); openRow(app, { ev: G.evidence[r.ev.id] }); };
     };
     home();
   });
   ui.className = '';
   await A.play(C.phoneDown());
   refresh();
+  for (const e of pending) { if (e.t === 'morning') await morningFlow(); else if (e.t === 'end') await endFlow(e.kind); if (ended) break; }
 }
 
 // ---------------------------------------------------------------- 아침·판결·결말
 async function morningFlow() {
   AU.setAmbient('morning');
   await show('n', line('morning', {}, lineRnd()));
-  const keep = G.day < 3;
-  const v = await pick(t('morningTitle'), t('morningText'), [...(keep ? [{ label: t('keep'), value: 'keep' }] : []), { label: t('toVerdict'), value: 'verdict' }]);
+  // 3일째 아침에도 '하루 더'를 고를 수 있다 → keepGoing 이 동료·경찰 결말로 끝낸다(SPEC)
+  const v = await pick(t('morningTitle'), t('morningText'), [{ label: t('keep'), value: 'keep' }, { label: t('toVerdict'), value: 'verdict' }]);
   if (v === 'keep') {
     ACTS.push(['__keep']);
     const evs = keepGoing(G); saveGame();
@@ -459,7 +462,12 @@ async function begin(resume = false) {
   AU.unlock(); AU.ambient('night', () => G.min); AU.bgm('night');
   I18N.setName($('hname').value); store.set('wm_name', $('hname').value.trim());
   $('start').classList.remove('on');
-  if (resume && saved) { replay(saved); refresh(); return; }
+  if (resume && saved) {
+    replay(saved); refresh();
+    // 저장 시점에 아침 선택이나 결말이 걸려 있었으면 그 흐름부터 다시
+    if (G.ended) { setBusy(true); await endFlow(G.ended); } else if (isMorning(G)) { setBusy(true); await morningFlow(); if (!ended) { refresh(); setBusy(false); } }
+    return;
+  }
   setBusy(true);
   refresh();
   const intro = lines('intro', { ev0: '' });
