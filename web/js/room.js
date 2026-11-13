@@ -77,7 +77,7 @@ export function makeRoom(scene) {
   win.position.set(-1.05, 1.45, cz - D / 2 + 0.01); R.group.add(win); R.window = win; R.nightTex = nightTex;
   let nightPhoto = null, morningPhoto = null;
   new THREE.TextureLoader().load('./assets/night.webp', (t) => { t.colorSpace = THREE.SRGBColorSpace; const a = t.image.width / t.image.height, rx = Math.min(1, (1.3 / 1.25) / a); t.repeat.set(rx, 1); t.offset.set((1 - rx) / 2, 0); nightPhoto = t; if (!R.isMorning) { win.material.map = t; win.material.needsUpdate = true; } }, undefined, () => {});
-  new THREE.TextureLoader().load('./assets/morning.webp', (t) => { t.colorSpace = THREE.SRGBColorSpace; morningPhoto = t; }, undefined, () => {});
+  new THREE.TextureLoader().load('./assets/morning.webp', (t) => { t.colorSpace = THREE.SRGBColorSpace; const a = t.image.width / t.image.height, rx = Math.min(1, (1.3 / 1.25) / a); t.repeat.set(rx, 1); t.offset.set((1 - rx) / 2, 0); morningPhoto = t; }, undefined, () => {});
   const frameM = new THREE.MeshStandardMaterial({ color: 0xe8e4dc, roughness: 0.5 });
   for (const [w, h, x, y] of [[1.38, 0.05, 0, 0.64], [1.38, 0.05, 0, -0.64], [0.05, 1.3, -0.67, 0], [0.05, 1.3, 0.67, 0], [0.035, 1.25, 0, 0]]) {
     const f = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.05), frameM); f.position.set(-1.05 + x, 1.45 + y, cz - D / 2 + 0.025); R.group.add(f);

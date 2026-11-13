@@ -390,7 +390,7 @@ async function verdictFlow(forced = false) {
   result(r);
 }
 // 결말 그림(사용자 제작 art/user/24~30). 없는 결말은 3D 장면 그대로
-const END_CARDS = { police: 'end_police', police_colleague: 'end_police_colleague', warm: 'end_warm', phone: 'end_phone', apart: 'end_apart' };
+const END_CARDS = { dead: 'end_dead', police: 'end_police', police_colleague: 'end_police_colleague', escaped: 'end_escaped', warm: 'end_warm', cold: 'end_cold', phone: 'end_phone', apart: 'end_apart' };
 function endCard(kind) {
   const el = $('endcard');
   if (!kind || !END_CARDS[kind]) { el.classList.remove('on'); return; }
@@ -403,7 +403,8 @@ async function endFlow(kind) {
   if (kind === 'escaped') { H.root.visible = false; room.setRopeVisible(false); AU.SFX.thud(); }
   const ls = lines(`end_${kind}`);
   for (let i = 0; i < ls.length; i++) {
-    if (kind === 'dead' && i === 1) AU.SFX.doorbell();
+    if (kind === 'dead' && i === 1) { AU.SFX.doorbell(); endCard(kind); }
+    if (kind === 'escaped' && i === 0) endCard(kind);
     if (kind === 'police' || kind === 'police_colleague') { if (i === 0) { AU.SFX.knock(); AU.SFX.siren(); endCard(kind); } }
     await show(kind === 'police' ? 'p' : 'n', ls[i], { hold: 2.6 });
   }
