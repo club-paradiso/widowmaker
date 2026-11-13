@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 GT=${GT:-npx gltf-transform}
 mkdir -p web/assets
-for n in husband wife spouse_f hands_m; do
+for n in husband wife; do
   $GT resize work/${n}_raw.glb work/${n}_r.glb --width 2048 --height 2048
   $GT webp work/${n}_r.glb work/${n}_w.glb --quality 82
   $GT meshopt work/${n}_w.glb web/assets/${n}.glb --level medium

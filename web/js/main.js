@@ -45,8 +45,8 @@ camera.fov = fitFov(innerWidth / innerHeight); camera.updateProjectionMatrix();
 THREE.DefaultLoadingManager.onProgress = (url, n, total) => { $('go').textContent = `${t('loading')} ${Math.round((n / Math.max(1, total)) * 100)}%`; };
 const room = makeRoom(scene);
 const [H, A] = await Promise.all([
-  loadHusband(scene, { url: MODE === 'w' ? './assets/spouse_f.glb' : './assets/husband.glb', envTex, faces, ageTex: MODE === 'w' ? './assets/skin_mid_f.webp' : './assets/skin_mid_m.webp' }),
-  loadArms(scene, camera, { url: MODE === 'w' ? './assets/hands_m.glb' : './assets/wife.glb', envTex, ring: true }),
+  loadHusband(scene, { url: './assets/husband.glb', envTex, faces, ageTex: './assets/skin_mid_m.webp' }),
+  loadArms(scene, camera, { url: './assets/wife.glb', envTex, ring: true }),
 ]);
 H.setExpr('nervous');
 const fxTicks = [];
@@ -130,14 +130,12 @@ function staticTexts() {
   $('title').innerHTML = t('title'); $('lead').innerHTML = t('lead');
   $('hname').placeholder = t('name_ph');
   document.querySelectorAll('#langRow button').forEach((b) => b.classList.toggle('on', b.dataset.lang === I18N.lang));
-  document.querySelectorAll('#modeRow button').forEach((b) => { b.textContent = t('mode_' + b.dataset.mode); b.classList.toggle('on', b.dataset.mode === MODE); b.setAttribute('aria-pressed', b.dataset.mode === MODE); });
   document.querySelectorAll('#langRow button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.lang === I18N.lang));
   $('skip').textContent = t('skip');
   $('logHead').innerHTML = `${t('notes_conf')}<i id="logN"></i>`; $('eviHead').textContent = t('notes_ev');
 }
 staticTexts();
 document.querySelectorAll('#langRow button').forEach((b) => (b.onclick = () => { store.set('wm_lang', b.dataset.lang); const u = new URL(location.href); u.searchParams.set('lang', b.dataset.lang); location.href = u.toString(); }));
-document.querySelectorAll('#modeRow button').forEach((b) => (b.onclick = () => { if (b.dataset.mode === MODE) return; store.set('wm_mode', b.dataset.mode); const u = new URL(location.href); u.searchParams.set('mode', b.dataset.mode); location.href = u.toString(); }));
 $('hname').value = store.get('wm_name') || '';
 { const a = $('age'); a.value = store.get('wm_age') || 32; const show = () => { $('ageOut').textContent = t('ageUnit', { n: a.value }); H.setAge(+a.value); }; a.oninput = show; show(); }
 { const v = JSON.parse(store.get('wm_vol') || '{}'); for (const k of ['se', 'amb', 'bgm']) { const val = v[k] ?? AU.volumes()[k]; $(`vol_${k}`).value = Math.round(val * 100); AU.setVolume(k, val); $(`vol_${k}`).oninput = (e) => { AU.setVolume(k, e.target.value / 100); store.set('wm_vol', JSON.stringify(AU.volumes())); }; } }
@@ -188,7 +186,7 @@ function actions() {
   for (const [id, a] of Object.entries(ACTIONS)) {
     if (!av.has(id)) continue;
     const k = labelKey(G, id);
-    const label = k ? (MODE === 'w' && I18N.ui.act_w?.[k] ? loc(I18N.ui.act_w[k]) : t('act.' + k)) : (I18N.lang === 'ko' ? `「${loc(baselineQ(G).q)}」` : `“${loc(baselineQ(G).q)}”`);
+    const label = k ? t('act.' + k) : (I18N.lang === 'ko' ? `「${loc(baselineQ(G).q)}」` : `“${loc(baselineQ(G).q)}”`);
     groups[a.group].push(`<button data-act="${id}"><span>${label}</span><small>${minLabel(a.min)}</small></button>`);
   }
   const verdictBtn = `<button class="verdict" data-act="__verdict">${t('verdictBtn')}</button>`;
@@ -246,7 +244,7 @@ function clipFor(id) {
     case 'blindOff': return C.blindOff();
     case 'tools': return C.tools();
     case 'shock': return C.shock();
-    case 'smash': return C.smash(MODE === 'w' ? 'ring' : 'watch');
+    case 'smash': return C.smash('watch');
     case 'stripTop': return C.stripTop();
     case 'stripBottom': return C.stripBottom();
     case 'divorce': return C.divorce();
@@ -377,7 +375,7 @@ async function morningFlow() {
 async function verdictFlow(forced = false) {
   const opts = [
     { label: t('v_forgive'), sub: t('v_forgive_d'), value: 'forgive' },
-    { label: MODE === 'w' ? t('v_pledge_w') : t('v_pledge'), sub: t('v_pledge_d'), value: 'pledge' },
+    { label: t('v_pledge'), sub: t('v_pledge_d'), value: 'pledge' },
     { label: t('v_divorce'), sub: t('v_divorce_d'), value: 'divorce' },
   ];
   if (!forced) opts.push({ label: t('back'), value: null });
