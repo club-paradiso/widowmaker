@@ -1,0 +1,592 @@
+{
+ "title": {
+  "ko": "바람핀 남편에게<br>전부 털어놓게 하기",
+  "en": "Make Your Cheating Husband<br>Confess Everything"
+ },
+ "kicker": {
+  "ko": "진술 청취 · 하룻밤",
+  "en": "Statement · one night"
+ },
+ "sub": {
+  "ko": "정말 한 번뿐이야?",
+  "en": "Really just once?"
+ },
+ "lead": {
+  "ko": "들킨 건 한 명. 그는 그게 전부라고 한다. 천장 고리에 손목을 매단 채, 아침이 오기 전에 전부 듣는다.",
+  "en": "One name slipped out. He swears that's all. Wrists tied to a ceiling hook — you'll hear everything before morning."
+ },
+ "rule1": {
+  "ko": "<b>바람이 한 번뿐이라는 보장은 없다.</b> \"이제 없어\"는 진실일 수도, 거짓일 수도 있다.",
+  "en": "<b>There may be more than one.</b> \"That's all\" could be true — or a lie."
+ },
+ "rule2": {
+  "ko": "<b>거짓말할 때 나오는 버릇이 있다.</b> 뻔한 질문(저녁 메뉴 같은)으로 평소 얼굴을 먼저 봐 둘 것.",
+  "en": "<b>There's a tell when the lie comes.</b> Ask easy questions (like dinner) to learn the honest face first."
+ },
+ "rule3": {
+  "ko": "<b>팔을 오래 들고 있으면 버티지 못한다.</b> 몰아붙이면 말이 안 통하고, 체력이 0이 되면 죽는다.",
+  "en": "<b>Arms overhead wear a body down.</b> Push too hard and words stop making sense. At zero stamina, death."
+ },
+ "name": {
+  "ko": "이름",
+  "en": "Name"
+ },
+ "name_ph": {
+  "ko": "(비우면 '남편')",
+  "en": "(blank = \"husband\")"
+ },
+ "vol": {
+  "ko": "소리",
+  "en": "Sound"
+ },
+ "vol_se": {
+  "ko": "효과음",
+  "en": "Effects"
+ },
+ "vol_amb": {
+  "ko": "방 소리",
+  "en": "Room"
+ },
+ "vol_bgm": {
+  "ko": "음악",
+  "en": "Music"
+ },
+ "loading": {
+  "ko": "불러오는 중…",
+  "en": "Loading…"
+ },
+ "start": {
+  "ko": "시작",
+  "en": "BEGIN"
+ },
+ "resume": {
+  "ko": "이어서 하기",
+  "en": "Continue"
+ },
+ "fiction": {
+  "ko": "이 이야기는 픽션입니다. 실제 인물·단체와 무관하며, 폭력을 권하지 않습니다.",
+  "en": "This story is fiction. It is not about real people and does not endorse violence."
+ },
+ "day": {
+  "ko": "{n}일째",
+  "en": "DAY {n}"
+ },
+ "look_h": {
+  "ko": "{S} · {age}세",
+  "en": "{S}, {age}"
+ },
+ "hood": {
+  "ko": "이웃",
+  "en": "Neighbors"
+ },
+ "arms": {
+  "ko": "팔",
+  "en": "Arms"
+ },
+ "hp0": {
+  "ko": "멀쩡한 얼굴이다",
+  "en": "Looks fine"
+ },
+ "hp1": {
+  "ko": "숨이 거칠다",
+  "en": "Breathing hard"
+ },
+ "hp2": {
+  "ko": "얼굴이 하얗다",
+  "en": "Gone pale"
+ },
+ "hp3": {
+  "ko": "축 늘어졌다",
+  "en": "Hanging limp"
+ },
+ "hp4": {
+  "ko": "눈이 풀렸다",
+  "en": "Eyes unfocused"
+ },
+ "n0": {
+  "ko": "조용하다",
+  "en": "Quiet"
+ },
+ "n1": {
+  "ko": "옆집에서 소리",
+  "en": "Sounds next door"
+ },
+ "n2": {
+  "ko": "벽을 두드린다",
+  "en": "Pounding on the wall"
+ },
+ "n3": {
+  "ko": "밖이 웅성거린다",
+  "en": "Voices outside"
+ },
+ "arm0": {
+  "ko": "버틸 만하다",
+  "en": "Holding up"
+ },
+ "arm1": {
+  "ko": "팔이 떨린다",
+  "en": "Arms trembling"
+ },
+ "arm2": {
+  "ko": "어깨가 한계다",
+  "en": "Shoulders failing"
+ },
+ "hu1": {
+  "ko": "배에서 소리가 난다",
+  "en": "Stomach growling"
+ },
+ "hu2": {
+  "ko": "입술이 다 텄다",
+  "en": "Lips cracked dry"
+ },
+ "blindTag": {
+  "ko": "눈가리개",
+  "en": "Blindfold"
+ },
+ "recTag": {
+  "ko": "녹음 중",
+  "en": "Recording"
+ },
+ "drunkTag": {
+  "ko": "취함",
+  "en": "Drunk"
+ },
+ "tension0": {
+  "ko": "줄 느슨",
+  "en": "Rope slack"
+ },
+ "tension1": {
+  "ko": "줄 보통",
+  "en": "Rope set"
+ },
+ "tension2": {
+  "ko": "줄 팽팽",
+  "en": "Rope taut"
+ },
+ "notes_conf": {
+  "ko": "털어놓은 것",
+  "en": "Confessed"
+ },
+ "notes_none": {
+  "ko": "아직 없다",
+  "en": "Nothing yet"
+ },
+ "notes_ev": {
+  "ko": "손에 쥔 증거",
+  "en": "Evidence in hand"
+ },
+ "used": {
+  "ko": "씀",
+  "en": "used"
+ },
+ "str3": {
+  "ko": "강",
+  "en": "Strong"
+ },
+ "str2": {
+  "ko": "중",
+  "en": "Medium"
+ },
+ "str1": {
+  "ko": "약",
+  "en": "Weak"
+ },
+ "g_ask": {
+  "ko": "묻기",
+  "en": "Ask"
+ },
+ "g_press": {
+  "ko": "몰아붙이기",
+  "en": "Press"
+ },
+ "g_other": {
+  "ko": "그 밖",
+  "en": "Other"
+ },
+ "verdictBtn": {
+  "ko": "판결 내리기",
+  "en": "Verdict"
+ },
+ "min": {
+  "ko": "{n}분",
+  "en": "{n}m"
+ },
+ "hours": {
+  "ko": "{n}시간",
+  "en": "{n}h"
+ },
+ "act": {
+  "push": {
+   "ko": "다른 것도 있지?",
+   "en": "There's more, isn't there?"
+  },
+  "minimize": {
+   "ko": "화 안 낼게, 말해",
+   "en": "I won't be angry"
+  },
+  "evidence": {
+   "ko": "증거 들이밀기",
+   "en": "Show evidence"
+  },
+  "recheck": {
+   "ko": "차분히 다시 묻기",
+   "en": "Ask again, calmly"
+  },
+  "askLove": {
+   "ko": "나 사랑해?",
+   "en": "Do you love me?"
+  },
+  "askWhy": {
+   "ko": "그 사람 어디가 좋았어?",
+   "en": "What did you see in her?"
+  },
+  "silence": {
+   "ko": "말없이 기다리기",
+   "en": "Wait in silence"
+  },
+  "slap": {
+   "ko": "뺨 때리기(살짝)",
+   "en": "Slap (light)"
+  },
+  "slapHard": {
+   "ko": "뺨 때리기(세게)",
+   "en": "Slap (hard)"
+  },
+  "water": {
+   "ko": "찬물 끼얹기",
+   "en": "Cold water"
+  },
+  "tighten": {
+   "ko": "줄 당기기",
+   "en": "Pull the rope"
+  },
+  "hair": {
+   "ko": "머리채 잡고 고개 들기",
+   "en": "Grab hair, lift face"
+  },
+  "blindOn": {
+   "ko": "눈 가리기",
+   "en": "Blindfold"
+  },
+  "blindOff": {
+   "ko": "눈가리개 풀기",
+   "en": "Remove blindfold"
+  },
+  "tools": {
+   "ko": "공구함 보여주기",
+   "en": "Show the toolbox"
+  },
+  "shock": {
+   "ko": "전기충격기",
+   "en": "Stun gun"
+  },
+  "smash": {
+   "ko": "소중한 물건 부수기",
+   "en": "Smash his keepsake"
+  },
+  "divorce": {
+   "ko": "이혼 서류 내밀기",
+   "en": "Divorce papers"
+  },
+  "mother": {
+   "ko": "시어머니께 전화(척)",
+   "en": "Call his mother (fake)"
+  },
+  "phone": {
+   "ko": "폰 뒤지기",
+   "en": "Search the phone"
+  },
+  "cry": {
+   "ko": "울기",
+   "en": "Cry"
+  },
+  "loosen": {
+   "ko": "줄 늦추기",
+   "en": "Slacken the rope"
+  },
+  "rest": {
+   "ko": "팔 내려 쉬게 하기",
+   "en": "Let the arms down"
+  },
+  "feed": {
+   "ko": "먹을 것 주기",
+   "en": "Feed"
+  },
+  "sake": {
+   "ko": "술 먹이기",
+   "en": "Make him drink"
+  },
+  "recordOn": {
+   "ko": "녹음 시작",
+   "en": "Start recording"
+  },
+  "recordOff": {
+   "ko": "녹음 멈춤",
+   "en": "Stop recording"
+  },
+  "leave": {
+   "ko": "내버려 두기",
+   "en": "Leave him"
+  },
+  "stripTop": {
+   "ko": "상의 벗기기",
+   "en": "Remove his shirt"
+  },
+  "stripBottom": {
+   "ko": "하의 벗기기",
+   "en": "Remove his pants"
+  }
+ },
+ "pickEv": {
+  "ko": "어떤 증거를 내밀까?",
+  "en": "Which evidence?"
+ },
+ "cancel": {
+  "ko": "그만두기",
+  "en": "Cancel"
+ },
+ "phone_home": {
+  "ko": "홈",
+  "en": "Home"
+ },
+ "phone_back": {
+  "ko": "← 뒤로",
+  "en": "← Back"
+ },
+ "phone_close": {
+  "ko": "폰 내려놓기",
+  "en": "Put the phone down"
+ },
+ "phone_take": {
+  "ko": "증거로 챙기기",
+  "en": "Keep as evidence"
+ },
+ "phone_took": {
+  "ko": "챙김",
+  "en": "Kept"
+ },
+ "phone_nothing": {
+  "ko": "별거 없다.",
+  "en": "Nothing here."
+ },
+ "morningTitle": {
+  "ko": "아침 7시",
+  "en": "7:00 AM"
+ },
+ "morningText": {
+  "ko": "출근 시간이다. 여기서 판결을 내리거나, 회사에 아프다고 전화하고 하루 더 붙잡아 둘 수 있다(최대 3일).",
+  "en": "Time for work. Deliver your verdict now — or call in sick for him and keep going (up to 3 days)."
+ },
+ "keep": {
+  "ko": "회사에 전화하고 하루 더",
+  "en": "Call in sick, one more day"
+ },
+ "toVerdict": {
+  "ko": "판결 내리기",
+  "en": "Deliver the verdict"
+ },
+ "verdictTitle": {
+  "ko": "판결",
+  "en": "Verdict"
+ },
+ "verdictText": {
+  "ko": "지금까지 들은 것으로 결론을 낸다. 아직 숨긴 게 있을지도 모른다.",
+  "en": "Decide with what you've heard. There may still be more."
+ },
+ "v_forgive": {
+  "ko": "용서한다",
+  "en": "Forgive"
+ },
+ "v_forgive_d": {
+  "ko": "없던 일로 하고 다시 시작",
+  "en": "Start over as if it never happened"
+ },
+ "v_pledge": {
+  "ko": "각서를 받고 넘어간다",
+  "en": "Make him sign a pledge"
+ },
+ "v_pledge_d": {
+  "ko": "다시 하면 끝이라는 각서",
+  "en": "One more time and it's over"
+ },
+ "v_divorce": {
+  "ko": "이혼한다",
+  "en": "Divorce"
+ },
+ "v_divorce_d": {
+  "ko": "위자료를 청구하고 끝낸다",
+  "en": "Claim damages and end it"
+ },
+ "back": {
+  "ko": "더 묻기",
+  "en": "Keep asking"
+ },
+ "resTitle": {
+  "forgive": {
+   "ko": "용서",
+   "en": "Forgiven"
+  },
+  "pledge": {
+   "ko": "각서",
+   "en": "The Pledge"
+  },
+  "divorce": {
+   "ko": "이혼",
+   "en": "Divorce"
+  },
+  "dead": {
+   "ko": "죽음",
+   "en": "Death"
+  },
+  "police": {
+   "ko": "신고",
+   "en": "Reported"
+  },
+  "police_colleague": {
+   "ko": "사흘째",
+   "en": "Day Three"
+  },
+  "escaped": {
+   "ko": "도주",
+   "en": "Escaped"
+  }
+ },
+ "resText": {
+  "all": {
+   "ko": "그는 정말 전부 털어놓았다. {N}명.",
+   "en": "He really did confess everything. {N} of them."
+  },
+  "some": {
+   "ko": "들은 건 {N}명 중 {told}명. 나머지는 끝까지 말하지 않았다.",
+   "en": "You heard {told} of {N}. He kept the rest to himself."
+  },
+  "none": {
+   "ko": "{N}명. 한 명도 제대로 듣지 못했다.",
+   "en": "{N} of them. You never got a single one."
+  },
+  "arrested": {
+   "ko": "나는 경찰에 연행되었다.",
+   "en": "I was taken in by the police."
+  },
+  "escaped": {
+   "ko": "그는 도망쳤고, 나는 고소당했다.",
+   "en": "He got away. And he pressed charges."
+  },
+  "amount": {
+   "ko": "청구한 위자료: {amount}",
+   "en": "Damages claimed: {amount}"
+  },
+  "coerced": {
+   "ko": "강요된 자백이라 증거로서 힘이 약해졌다.",
+   "en": "Coerced confessions carry less weight in court."
+  }
+ },
+ "truth": {
+  "ko": "진상",
+  "en": "The truth"
+ },
+ "rank": {
+  "ko": "등급",
+  "en": "Rank"
+ },
+ "score": {
+  "ko": "점수",
+  "en": "Score"
+ },
+ "tellWas": {
+  "ko": "거짓말 버릇",
+  "en": "The tell"
+ },
+ "force": {
+  "ko": "폭력",
+  "en": "Force"
+ },
+ "force0": {
+  "ko": "손 하나 안 댐",
+  "en": "Never laid a hand"
+ },
+ "rambles": {
+  "ko": "헛소리",
+  "en": "Ramblings"
+ },
+ "perfect": {
+  "ko": "손 하나 대지 않고 전부 받아냈다. 이 방의 주인은 당신이었다.",
+  "en": "Everything, without laying a hand on him. You owned the room."
+ },
+ "got": {
+  "ko": "들음",
+  "en": "heard"
+ },
+ "hid": {
+  "ko": "숨김",
+  "en": "hidden"
+ },
+ "again": {
+  "ko": "다시 하기",
+  "en": "Play again"
+ },
+ "share": {
+  "ko": "X에 올리기",
+  "en": "Post to X"
+ },
+ "copy": {
+  "ko": "결과 복사",
+  "en": "Copy result"
+ },
+ "copied": {
+  "ko": "복사함",
+  "en": "Copied"
+ },
+ "shareText": {
+  "ko": "#바람핀남편심문 {rank}등급 · {N}명 중 {told}명 자백 · {title}",
+  "en": "#ConfessEverything Rank {rank} · {told}/{N} confessed · {title}"
+ },
+ "skip": {
+  "ko": "건너뛰기",
+  "en": "Skip"
+ },
+ "tap": {
+  "ko": "▼",
+  "en": "▼"
+ },
+ "won": {
+  "ko": "{n}만 원",
+  "en": "₩{n}0,000"
+ },
+ "epiSkip": {
+  "ko": "건너뛰기 ▶",
+  "en": "Skip ▶"
+ },
+ "age": {
+  "ko": "나이",
+  "en": "Age"
+ },
+ "ageUnit": {
+  "ko": "{n}세",
+  "en": "{n}"
+ },
+ "topOff": {
+  "ko": "상의 없음",
+  "en": "No shirt"
+ },
+ "bottomOff": {
+  "ko": "하의 없음",
+  "en": "No pants"
+ },
+ "gfx": {
+  "ko": "화질",
+  "en": "Graphics"
+ },
+ "gfx_high": {
+  "ko": "높음",
+  "en": "High"
+ },
+ "gfx_low": {
+  "ko": "가볍게",
+  "en": "Light"
+ },
+ "gfx_off": {
+  "ko": "끄기",
+  "en": "Off"
+ }
+}
