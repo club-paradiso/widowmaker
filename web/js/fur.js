@@ -70,13 +70,17 @@ float furA = 1.0;`)
 	  float freq = 900.0 + 900.0 * dd.g;               // 수염은 더 촘촘하고 가늘게
 	  vec2 c = vFurUv * freq; vec2 ci = floor( c ); vec2 cf = fract( c ) - 0.5;
 	  float rn = fh( ci );
-	  if ( rn > dens ) discard;
 	  vec2 o = ( vec2( fh( ci + 1.7 ), fh( ci + 9.2 ) ) - 0.5 ) * 0.35;
 	  float r = 0.36 * ( 1.0 - uLayer * 0.9 );       // 끝으로 갈수록 가늘다
 	  float e = length( cf - o ) - r;
 	  float aa = max( fwidth( e ), 1e-4 );
-	  furA = 1.0 - smoothstep( -aa, aa, e );          // 가장자리를 부드럽게(MSAA 알파 커버리지)
-	  if ( furA <= 0.01 ) discard; }`)
+	  float strand = ( rn > dens ? 0.0 : 1.0 ) * ( 1.0 - smoothstep( -aa, aa, e ) );
+	  // 가닥이 화소보다 작아지는 거리에서는 낱가닥 대신 평균 덮임으로(소금·후추처럼 지글거리지 않게)
+	  float px = length( fwidth( c ) );
+	  vec2 nc = floor( c * 0.08 ); float nz = mix( fh( nc ), fh( nc + 1.0 ), 0.5 );
+	  float avg = min( 1.0, dens * 3.14159 * r * r * 1.7 * ( 0.55 + 0.9 * nz ) ); // 얼룩지게(고른 칠처럼 보이지 않게)
+	  furA = mix( strand, avg, smoothstep( 0.7, 1.4, px ) );
+	  if ( furA <= 0.02 ) discard; }`)
           .replace('#include <color_fragment>', `#include <color_fragment>
 	diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 0.32, 0.3, 0.28 ), uHairGrey );
 	diffuseColor.rgb *= mix( 0.45, 1.15, uLayer );    // 뿌리 쪽은 그늘

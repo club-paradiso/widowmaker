@@ -64,15 +64,19 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
     if (/^underwear\./.test(name)) { under[o.name.startsWith('bra') ? 'bra' : 'briefs'] = o; m.roughness = 0.85; m.color.setRGB(0.045, 0.045, 0.05); o.visible = false; }
     if (/^hair\./.test(name)) {
       // 머리카락: 결 방향으로 은은한 광(시엔)을 주는 물리 재질로 바꿔 덜 뭉쳐 보이게
-      const hp = new THREE.MeshPhysicalMaterial({ map: m.map, color: m.color, alphaTest: 0.12, alphaToCoverage: true, side: THREE.DoubleSide, roughness: 0.75, sheen: 0.0, sheenRoughness: 0.5, sheenColor: new THREE.Color(0.22, 0.19, 0.16), name: m.name });
+      const hp = new THREE.MeshPhysicalMaterial({ map: m.map, color: m.color, envMapIntensity: 0.15, specularIntensity: 0.35, alphaTest: 0.12, alphaToCoverage: true, side: THREE.DoubleSide, roughness: 0.75, sheen: 0.0, sheenRoughness: 0.5, sheenColor: new THREE.Color(0.22, 0.19, 0.16), name: m.name });
       hp.color.multiply(new THREE.Color(0.085, 0.078, 0.075)); // 참고 사진(01·02)처럼 짙은 흑발
+      // 머리 텍스처의 투명한 가장자리 색(파르스름)이 비치지 않게 색을 무채색 밝기로만 쓴다
+      hp.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n\tdiffuseColor.rgb = vec3( dot( diffuseColor.rgb, vec3( 0.3, 0.59, 0.11 ) ) ) * vec3( 1.0, 0.93, 0.86 );'); };
       if (/bob|long|ponytail|braid/.test(name)) hp.color.setRGB(0.2, 0.15, 0.12);
       o.material = hp;
       hair.push(o);
     } else if (/^(eyebrows|eyelashes)\./.test(name)) {
       m.transparent = true; m.depthWrite = false; m.alphaTest = 0.05; o.renderOrder = 2; o.castShadow = false;
     } else if (/^eyes\./.test(name)) {
-      m.alphaTest = 0.3; m.roughness = 0.08; m.color.multiply(new THREE.Color(0.72, 0.76, 0.8)); // 따뜻한 조명에서 붉게 뜨지 않게
+      // 눈: 물기 있는 각막(클리어코트)으로 반사점이 맺히게 → 눈에 생기가 돈다
+      const e = new THREE.MeshPhysicalMaterial({ map: m.map, color: m.color.clone().multiply(new THREE.Color(0.72, 0.76, 0.8)), alphaTest: 0.3, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.2, name: m.name });
+      o.material = e;
     } else if (/^(teeth|tongue)\./.test(name)) {
       m.envMapIntensity = 0.05; m.roughness = 0.5; m.color.multiply(new THREE.Color(0.7, 0.66, 0.6));
     } else if (/^clothes\./.test(name)) {
@@ -82,10 +86,10 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
       // 셔츠·바지 천(사용자 제작 art/user/11·12): 원래 줄무늬 셔츠·청바지 무늬를 옅은 하늘색 옥스퍼드 셔츠·차콜 바지로 바꾼다. 신발은 그대로
       const fab = /suit/.test(name) ? (/top$/.test(o.name) ? 'fab_shirt' : /bottom$/.test(o.name) ? 'fab_trouser' : null) : null;
       if (fab) {
-        const c = m.clone(); o.material = c; if (fab === 'fab_trouser') c.color.setRGB(0.55, 0.55, 0.57); else c.color.setRGB(0.8, 0.8, 0.82);
+        const c = m.clone(); o.material = c; if (fab === 'fab_trouser') c.color.setRGB(0.55, 0.55, 0.57); else c.color.setRGB(0.66, 0.74, 0.92); // 따뜻한 조명 아래서도 하늘색이 남게
         // 펜던트 바로 아래라 밝은 천이 하얗게 타지 않게 밝은 쪽만 부드럽게 눌러 준다(색은 유지)
         c.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <tonemapping_fragment>', '{ float L = max( max( gl_FragColor.r, gl_FragColor.g ), gl_FragColor.b ); if ( L > 0.0 ) gl_FragColor.rgb *= ( 1.7 * L / ( 1.0 + 1.7 * L ) ) / L; }\n#include <tonemapping_fragment>'); };
-        new THREE.TextureLoader().load(vq(`./assets/${fab}.webp`), (t) => { t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping; const rp = fab === 'fab_trouser' ? 7 : 5; t.repeat.set(rp, rp); t.anisotropy = 8; c.map = t; c.needsUpdate = true; }, undefined, () => {});
+        new THREE.TextureLoader().load(vq(`./assets/${fab}.webp`), (t) => { t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping; const rp = fab === 'fab_trouser' ? 4 : 2.5; t.repeat.set(rp, rp); t.anisotropy = 8; c.map = t; c.needsUpdate = true; }, undefined, () => {}); // 촘촘하면 멀리서 짜임이 가로 줄무늬(모아레)로 보인다
       }
     } else if (/^body\./.test(name)) {
       const p = new THREE.MeshPhysicalMaterial({
@@ -95,7 +99,7 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
       p.name = name;
       // 모공 요철(사용자 제공 art/user/03 에서 만든 노멀맵). 몸 UV 를 촘촘히 반복한다
       p.normalScale = new THREE.Vector2(0.65, 0.65);
-      new THREE.TextureLoader().load(vq('./assets/skin_pore_n.webp'), (t) => { t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping; t.repeat.set(36, 24); t.anisotropy = 8; p.normalMap = t; p.needsUpdate = true; }, undefined, () => {});
+      new THREE.TextureLoader().load(vq('./assets/skin_pore_n.webp'), (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(36, 24); t.anisotropy = 8; p.normalMap = t; p.needsUpdate = true; }, undefined, () => {});
       if (envTex) { p.envMap = envTex; p.envMapIntensity = 0.5; }
       p.onBeforeCompile = (sh) => {
         Object.assign(sh.uniforms, { uRed: U.red, uRedK: U.redK, uPale: U.pale, uWet: U.wet, uBruise: U.bruise, uWear: U.wear, uAgeMap: U.ageMap, uAgeK: U.ageK, uPore: U_PORE, uHair: U.hair, uHairK: U.hairK, uBeardK: U.beardK, uHairGrey: U.hairGrey, uSweat: U.sweat, uScalp: U.scalp, uCav: U.cav });

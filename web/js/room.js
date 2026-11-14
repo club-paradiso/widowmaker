@@ -21,6 +21,15 @@ function photoTex(url, mat, repeat, key = 'map', mirror = true) {
   }, undefined, () => {});
 }
 
+// 노멀맵(tools/make_normals.py 로 사진에서 계산): 무늬·결·짜임이 빛에 따라 도드라진다
+// 노멀맵은 거울 반복을 쓰면 칸마다 요철 방향이 뒤집혀 줄무늬가 생긴다 → 일반 반복
+function normalTex(url, mat, repeat, scale = 1, mirror = false) {
+  new THREE.TextureLoader().load(url, (t) => {
+    t.wrapS = t.wrapT = mirror ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping; t.repeat.set(...repeat); t.anisotropy = 8;
+    mat.normalMap = t; mat.normalScale = new THREE.Vector2(scale, scale); mat.needsUpdate = true;
+  }, undefined, () => {});
+}
+
 export function makeRoom(scene) {
   const R = { group: new THREE.Group(), lights: {} };
   scene.add(R.group);
@@ -41,17 +50,17 @@ export function makeRoom(scene) {
       g.fillStyle = 'rgba(15,8,3,0.8)'; g.fillRect(0, (i * h) / rows, w, 2);
     }
   }, [2.5, 2.5]);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.62 }));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.4 }) /* 코팅된 마루: 램프와 창이 은은히 비친다 */);
   floor.rotation.x = -Math.PI / 2; floor.position.z = cz; floor.receiveShadow = true; R.group.add(floor);
-  photoTex('./assets/floor.webp', floor.material, [2.1, 3.6]);
+  photoTex('./assets/floor.webp', floor.material, [2.1, 3.6]); normalTex('./assets/floor_n.webp', floor.material, [2.1, 3.6], 0.6);
   // 벽지: 따뜻한 회색, 아주 옅은 세로 무늬
   const wallTex = canvasTex(512, 512, (g, w, h) => {
     g.fillStyle = '#b8aa98'; g.fillRect(0, 0, w, h);
     for (let x = 0; x < w; x += 16) { g.fillStyle = `rgba(255,255,255,${0.025 + (x % 64 === 0 ? 0.03 : 0)})`; g.fillRect(x, 0, 6, h); }
     for (let k = 0; k < 4000; k++) { g.fillStyle = `rgba(0,0,0,${rnd() * 0.04})`; g.fillRect(rnd() * w, rnd() * h, 1, 1); }
   }, [3, 1.5]);
-  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.92 });
-  photoTex('./assets/wall.webp', wallMat, [3, 2.5]);
+  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.92, color: new THREE.Color(0.86, 0.84, 0.83) }); // 따뜻한 조명에 벽이 노랗게 뜨지 않게
+  photoTex('./assets/wall.webp', wallMat, [3, 2.5]); normalTex('./assets/wall_n.webp', wallMat, [3, 2.5], 0.8);
   const wall = (w, x, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, H), wallMat); m.position.set(x, H / 2, z); m.rotation.y = ry; m.receiveShadow = true; R.group.add(m); return m; };
   wall(W, 0, cz - D / 2, 0); wall(W, 0, cz + D / 2, Math.PI); wall(D, -W / 2, cz, Math.PI / 2); wall(D, W / 2, cz, -Math.PI / 2);
   // 걸레받이
@@ -84,7 +93,7 @@ export function makeRoom(scene) {
   }
   // 커튼(반쯤 닫힘)
   const curtainTex = canvasTex(256, 256, (g, w, h) => { for (let x = 0; x < w; x++) { const v = 105 + 30 * Math.sin(x * 0.19) + 10 * Math.sin(x * 0.53); g.fillStyle = `rgb(${v * 0.7},${v * 0.55},${v * 0.48})`; g.fillRect(x, 0, 1, h); } });
-  const curtainMat = new THREE.MeshStandardMaterial({ map: curtainTex, roughness: 1, side: THREE.DoubleSide }); photoTex('./assets/curtain.webp', curtainMat, [0.6, 1.4]);
+  const curtainMat = new THREE.MeshStandardMaterial({ map: curtainTex, roughness: 1, side: THREE.DoubleSide }); photoTex('./assets/curtain.webp', curtainMat, [0.6, 1.4]); normalTex('./assets/curtain_n.webp', curtainMat, [0.6, 1.4], 1.0);
   const curtain = (x) => { const cm = curtainMat; const c = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 1.95, 24, 1), cm); const p = c.geometry.attributes.position; for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin(p.getX(i) * 28) * 0.03); c.geometry.computeVertexNormals(); c.position.set(x, 1.32, cz - D / 2 + 0.09); c.castShadow = true; R.group.add(c); };
   curtain(-1.62); curtain(-0.62);
   const moon = new THREE.DirectionalLight(0x6f8fd0, 0.25); moon.position.set(-1.0, 1.8, cz - D / 2 - 1); moon.target.position.set(0, 0, 0.5); R.group.add(moon, moon.target); R.lights.moon = moon;
@@ -111,6 +120,20 @@ export function makeRoom(scene) {
   const clkMat = new THREE.MeshStandardMaterial({ map: clockFace, roughness: 0.6 }); photoTex('./assets/clock.webp', clkMat, [1, 1], 'map', false);
   const clk = new THREE.Mesh(new THREE.CircleGeometry(0.17, 40), clkMat);
   clk.position.set(0.95, 2.0, cz - D / 2 + 0.02); R.group.add(clk);
+  // 생활 디테일: 결혼사진 액자(사용자 제작 lock.webp), 스위치·콘센트, 천장 등 받침
+  { const fr = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.46, 0.025), new THREE.MeshStandardMaterial({ color: 0x2a1d14, roughness: 0.45 }));
+    fr.position.set(1.62, 1.42, cz - D / 2 + 0.014); fr.castShadow = true; R.group.add(fr);
+    const ph = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.4), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.08 }));
+    ph.position.set(1.62, 1.42, cz - D / 2 + 0.028); R.group.add(ph);
+    photoTex('./assets/lock.webp', ph.material, [1, 0.8], 'map', false); // 세로 사진의 아래쪽(두 사람)만
+    R.photo = ph;
+    const plate = new THREE.MeshStandardMaterial({ color: 0xe8e2d6, roughness: 0.5 });
+    const sw = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.012), plate); sw.position.set(W / 2 - 0.006, 1.2, cz + 1.4); sw.rotation.y = -Math.PI / 2; R.group.add(sw);
+    const tg = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.05, 0.012), plate); tg.position.set(W / 2 - 0.014, 1.2, cz + 1.4); tg.rotation.y = -Math.PI / 2; R.group.add(tg);
+    for (const [x, z, ry] of [[-W / 2 + 0.006, cz - 0.8, Math.PI / 2], [1.9, cz - D / 2 + 0.006, 0]]) {
+      const ou = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.075, 0.012), plate); ou.position.set(x, 0.3, z); ou.rotation.y = ry; R.group.add(ou);
+    }
+    const rose = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.02, 32), plate); rose.position.set(0.62, H - 0.01, -0.15); R.group.add(rose); }
   const hand = (len, w, c) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, len, 0.004), new THREE.MeshBasicMaterial({ color: c })); m.geometry.translate(0, len / 2, 0); m.position.set(0.95, 2.0, cz - D / 2 + 0.03); R.group.add(m); return m; };
   R.clockH = hand(0.09, 0.012, 0x222222); R.clockM = hand(0.115, 0.008, 0x222222);
   R.setClock = (min) => { const h = (min / 60) % 12; R.clockH.rotation.z = -(h / 12) * Math.PI * 2; R.clockM.rotation.z = -((min % 60) / 60) * Math.PI * 2; };
@@ -122,7 +145,7 @@ export function makeRoom(scene) {
   const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.03, 8), metal); stem.position.set(0, H - 0.025, 0.02); R.group.add(stem);
   R.hookPoint = new THREE.Vector3(0, H - 0.09, 0.02);
   const ropeTex = canvasTex(64, 256, (g, w, h) => { g.fillStyle = '#b39b74'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 8) { g.strokeStyle = 'rgba(70,52,30,0.6)'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, y); g.lineTo(w, y + 8); g.stroke(); } }, [1, 30]);
-  const ropeMat = new THREE.MeshStandardMaterial({ map: ropeTex, roughness: 0.95 }); photoTex('./assets/rope.webp', ropeMat, [10, 1]);
+  const ropeMat = new THREE.MeshStandardMaterial({ map: ropeTex, roughness: 0.95 }); photoTex('./assets/rope.webp', ropeMat, [10, 1]); normalTex('./assets/rope_n.webp', ropeMat, [10, 1], 1.4);
   let rope = null, wrap = null;
   R.updateRope = (wristMid, wristL, wristR) => {
     const top = R.hookPoint;

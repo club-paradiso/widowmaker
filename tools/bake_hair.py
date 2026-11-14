@@ -157,7 +157,7 @@ if a.scalp:  # 두피: 머리카락 사이로 피부가 비치지 않게 어둡�
     print('wrote', a.scalp)
     if a.density:  # 셸 털이 자랄 곳과 세기: 가장자리가 부드럽게 사라지도록 흐리게
         body_d = np.clip(np.maximum.reduce([chest, trail * 0.9, pit, fore, legs]), 0, 1)
-        dens = Image.merge('RGB', [field(body_d, 8), field(beard, 6), sc_img])
+        dens = Image.merge('RGB', [field(body_d, 8), field(beard, 18), sc_img])  # 수염 가장자리를 넓게 흐려 경계선이 보이지 않게
         dens.resize((1024, 1024), Image.LANCZOS).save(a.density, optimize=True)
         print('wrote', a.density)
 print('skipped', skipped[0]); print('wrote', a.out, 'strands', int((np.asarray(imgR) > 0).sum()), int((np.asarray(imgG) > 0).sum()))

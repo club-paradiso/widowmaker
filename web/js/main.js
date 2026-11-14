@@ -43,6 +43,10 @@ const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.03, 4
 const fitFov = (aspect) => (aspect >= 1 ? 48 : Math.min(48 * 1.45, (2 * Math.atan(Math.tan((48 * Math.PI) / 360) / aspect) * 180) / Math.PI));
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); post.resize(); camera.aspect = innerWidth / innerHeight; camera.fov = fitFov(camera.aspect); camera.updateProjectionMatrix(); layoutSub(); });
 camera.fov = fitFov(innerWidth / innerHeight); camera.updateProjectionMatrix();
+// 카메라에 붙은 약한 보조광(영화 촬영의 아이라이트): 위에서 내리꽂는 조명에 가려진 얼굴을 살짝 살리고 눈에 반사점을 만든다
+const eyeLight = new THREE.PointLight(0xffe9d8, 0.9, 3.5, 2);
+eyeLight.position.set(0.05, 0.08, 0);
+camera.add(eyeLight); scene.add(camera);
 // 화면 처리(화질): ?gfx=high|low|off 가 우선, 다음은 저장값, 없으면 기기에 맞춰
 const post = makePost(renderer, scene, camera);
 const GFX = ['high', 'low', 'off'];
@@ -64,6 +68,21 @@ function guardPerf(dt) {
 
 THREE.DefaultLoadingManager.onProgress = (url, n, total) => { $('go').textContent = `${t('loading')} ${Math.round((n / Math.max(1, total)) * 100)}%`; };
 const room = makeRoom(scene);
+// 반사 탐침: 방이 다 그려진 뒤 방 안에서 사방을 찍어 주변광·반사로 쓴다(남편·손은 빼고).
+// 기본 스튜디오 조명(RoomEnvironment) 대신 실제 방의 따뜻한 빛과 어두운 구석이 피부·눈·바닥에 비친다
+function captureProbe() {
+  if (!H) return;
+  const hid = [H.root, A && (A.root || A.group)].filter(Boolean).map((o) => [o, o.visible]);
+  hid.forEach(([o]) => (o.visible = false));
+  const gen = new THREE.PMREMGenerator(renderer);
+  const probe = gen.fromScene(scene, 0.03, 0.05, 30, { size: 256, position: new THREE.Vector3(0, 1.45, 0.4) }).texture;
+  gen.dispose();
+  hid.forEach(([o, v]) => (o.visible = v));
+  scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []; for (const m of ms) if ('envMap' in m && (m.envMap === envTex || m.envMap === probeTex)) { m.userData.envI0 ??= m.envMapIntensity; m.envMapIntensity = m.userData.envI0 * 0.5; m.envMap = probe; m.needsUpdate = true; } }); // 방 빛은 이미 직접광으로도 들어오므로 반사는 절반만
+  if (probeTex) probeTex.dispose();
+  probeTex = probe; scene.environment = probe; scene.environmentIntensity = 0.16;
+}
+let probeTex = null;
 const [H, A] = await Promise.all([
   loadHusband(scene, { url: './assets/husband.glb', envTex, faces, ageTex: './assets/skin_mid_m.webp' }),
   loadArms(scene, camera, { url: './assets/wife.glb', envTex, ring: true }),
@@ -442,7 +461,7 @@ async function epilogue(kind) {
   await wait(1.2);
   let skip = false; $('skip').onclick = () => { skip = true; if (skipWait) skipWait(); };
   // 장면 꾸미기: 아침 빛, 묶인 사람·줄·소품은 치운다
-  room.setMorning(true); AU.setAmbient('morning'); AU.bgm(kind === 'apart' ? 'lonely' : 'morning');
+  room.setMorning(true); setTimeout(captureProbe, 300); AU.setAmbient('morning'); AU.bgm(kind === 'apart' ? 'lonely' : 'morning');
   H.root.visible = false; room.setRopeVisible(false); A.root.visible = false;
   for (const o of [toolboxObj, recorderObj]) if (o) o.visible = false;
   const extras = [];
@@ -573,6 +592,7 @@ else renderer.setAnimationLoop(() => { const now = performance.now(); const raw 
 window.__act = (id, arg) => perform(id, arg);
 window.__G = () => G;
 window.__H = () => H;
+window.__R = () => renderer;
 window.__view = (v) => setView(v, 50);
 window.__clip = (name, ...a) => runClip(C[name](...a));
 window.__begin = begin;
@@ -580,4 +600,7 @@ window.__epi = (k) => epilogue(k);
 window.__dbg = () => ({ clip: !!A.clip, t: A.t, view, cam: camera.position.toArray().map((x) => +x.toFixed(2)), hr: A.bones.hand_r.getWorldPosition(new THREE.Vector3()).toArray().map((x) => +x.toFixed(2)), cheek: H.point("cheekL").toArray().map((x) => +x.toFixed(2)), eyes: H.point("eyes").toArray().map((x) => +x.toFixed(2)), vis: A.root.visible, sh: A.bones.upperarm_r.getWorldPosition(new THREE.Vector3()).toArray().map((x) => +x.toFixed(2)), el: A.bones.lowerarm_r.getWorldPosition(new THREE.Vector3()).toArray().map((x) => +x.toFixed(2)), root: A.root.position.toArray().map((x) => +x.toFixed(2)) });
 $('go').disabled = false; $('go').textContent = t('start');
 if (q.has('step')) window.__step(2);
+// 방 사진 질감이 다 읽힌 뒤 반사 탐침을 찍는다(아침 장면이 되면 다시)
+THREE.DefaultLoadingManager.onLoad = () => captureProbe();
+setTimeout(captureProbe, 2500);
 window.__ready = true;
