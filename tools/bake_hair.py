@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from build_human import read_obj, read_mhclo
 
 ap = argparse.ArgumentParser(); ap.add_argument('--mpfb', required=True); ap.add_argument('--out', required=True)
-ap.add_argument('--scalp', help='두피 그늘 지도(L) 출력 경로'); ap.add_argument('--hair-mhclo', help='머리카락 프록시(.mhclo): 이 머리가 덮는 정점을 두피로 본다'); ap.add_argument('--size', type=int, default=2048); ap.add_argument('--seed', type=int, default=7)
+ap.add_argument('--scalp', help='두피 그늘 지도(L) 출력 경로'); ap.add_argument('--density', help='입체 털(셸)용 밀도 지도(RGB: 몸 털·수염·두피) 출력 경로'); ap.add_argument('--hair-mhclo', help='머리카락 프록시(.mhclo): 이 머리가 덮는 정점을 두피로 본다'); ap.add_argument('--size', type=int, default=2048); ap.add_argument('--seed', type=int, default=7)
 a = ap.parse_args()
 rng = np.random.default_rng(a.seed)
 v, vt, f, g = read_obj(os.path.join(a.mpfb, '3dobjs/base.obj'))
@@ -65,9 +65,9 @@ ax = np.abs(rel[:, 0])
 soft = lambda q, lo, hi, w: smooth(q, lo - w, lo + w) * (1 - smooth(q, hi - w, hi + w))
 lips = soft(ax, -1, 0.44, 0.06) * soft(rel[:, 1], -0.13, 0.08, 0.03) * (z > 1.2)
 must = band(rel[:, 1], 0.08, 0.2, 0.05) * (1 - smooth(ax, 0.36, 0.52)) * (z > 1.2)               # 인중(코 밑~윗입술)
-chinjaw = band(rel[:, 1], -0.62, 0.02, 0.12) * (1 - smooth(ax, 0.9, 1.12))                    # 입꼬리 높이 아래 턱·턱선
-side = band(rel[:, 1], -0.62, 0.14, 0.12) * smooth(ax, 0.5, 0.68) * (1 - smooth(ax, 0.9, 1.12))  # 귀 앞으로 이어지는 옆선
-under = band(y, 6.0, 6.16, 0.08) * (z > 0.55) * np.clip(1 - np.abs(x) / 0.8, 0, 1) * 0.45      # 턱 밑
+chinjaw = band(rel[:, 1], -0.47, 0.02, 0.1) * (1 - smooth(ax, 0.9, 1.12))                    # 입꼬리 높이 아래 턱·턱선
+side = band(rel[:, 1], -0.47, 0.14, 0.1) * smooth(ax, 0.5, 0.68) * (1 - smooth(ax, 0.9, 1.12))  # 귀 앞으로 이어지는 옆선
+under = band(y, 6.06, 6.18, 0.06) * (z > 0.55) * np.clip(1 - np.abs(x) / 0.7, 0, 1) * 0.35      # 턱 밑
 beard = np.clip(face * np.maximum.reduce([must, chinjaw, side]) * (1 - lips) + under, 0, 1)
 beard = beard * (y > neck[1] - 0.2)
 
@@ -152,6 +152,12 @@ if a.scalp:  # 두피: 머리카락 사이로 피부가 비치지 않게 어둡�
     else:
         hc = C[:, 1] > 7.0
         scalp = hc * np.maximum(smooth(y, 7.68, 7.8), smooth(y, 7.25, 7.45) * (1 - smooth(z, 0.2, 0.6)) * smooth(np.abs(x), 0.55, 0.75))
-    field(np.clip(scalp * keep, 0, 1), 12).resize((1024, 1024), Image.LANCZOS).save(a.scalp, optimize=True)
+    sc_img = field(np.clip(scalp * keep, 0, 1), 12)
+    sc_img.resize((1024, 1024), Image.LANCZOS).save(a.scalp, optimize=True)
     print('wrote', a.scalp)
+    if a.density:  # 셸 털이 자랄 곳과 세기: 가장자리가 부드럽게 사라지도록 흐리게
+        body_d = np.clip(np.maximum.reduce([chest, trail * 0.9, pit, fore, legs]), 0, 1)
+        dens = Image.merge('RGB', [field(body_d, 8), field(beard, 6), sc_img])
+        dens.resize((1024, 1024), Image.LANCZOS).save(a.density, optimize=True)
+        print('wrote', a.density)
 print('skipped', skipped[0]); print('wrote', a.out, 'strands', int((np.asarray(imgR) > 0).sum()), int((np.asarray(imgG) > 0).sum()))

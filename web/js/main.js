@@ -53,6 +53,7 @@ renderer.shadowMap.type = post.mode === 'high' ? THREE.VSMShadowMap : THREE.PCFS
 // 사람이 화질을 고르지 않았으면, 실제로 버벅일 때 한 단계씩 낮춘다(평균 프레임이 24fps 아래로 2초 넘게)
 const gfxAuto = !q.get('gfx') && !store.get('wm_gfx');
 const perf = { t: 0, n: 0 };
+const _fv = new THREE.Vector3();
 function guardPerf(dt) {
   if (!gfxAuto || post.mode === 'off' || document.hidden) return;
   perf.t += dt; perf.n++;
@@ -562,6 +563,7 @@ function tick(dt) {
   A.update(dt);
   for (let i = fxTicks.length - 1; i >= 0; i--) if (fxTicks[i](dt) === false) fxTicks.splice(i, 1);
   if (recorderObj && recorderObj.visible) recorderObj.userData.dot.visible = Math.floor(performance.now() / 600) % 2 === 0;
+  if (H && H.root.visible) post.setFocus(camera.position.distanceTo(H.point('eyes', _fv)));
   post.render(dt);
 }
 if (q.has('step')) window.__step = (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++) tick(dt); };

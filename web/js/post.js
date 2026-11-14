@@ -7,6 +7,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 
 const FilmShader = {
   uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uGrain: { value: 0.045 }, uVig: { value: 0.32 } },
@@ -30,7 +31,7 @@ const FilmShader = {
 };
 
 export function makePost(renderer, scene, camera) {
-  let comp = null, gtao = null, bloom = null, film = null, mode = 'off', time = 0;
+  let comp = null, gtao = null, bloom = null, film = null, bokeh = null, mode = 'off', time = 0, focus = 1.5;
   const size = new THREE.Vector2();
   function build(q) {
     if (comp) { comp.dispose(); comp = null; }
@@ -38,7 +39,8 @@ export function makePost(renderer, scene, camera) {
     renderer.setPixelRatio(Math.min(devicePixelRatio, q === 'high' ? 2 : q === 'low' ? 1.25 : 2));
     renderer.getSize(size);
     if (q === 'off') return;
-    comp = new EffectComposer(renderer);
+    // 높음: 화면 처리 버퍼에도 MSAA(4배) → 털 가장자리·가는 선이 덜 깨진다
+    comp = q === 'high' ? new EffectComposer(renderer, new THREE.WebGLRenderTarget(size.x * renderer.getPixelRatio(), size.y * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: 4 })) : new EffectComposer(renderer);
     comp.addPass(new RenderPass(scene, camera));
     if (q === 'high') {
       gtao = new GTAOPass(scene, camera, size.x, size.y);
@@ -46,7 +48,10 @@ export function makePost(renderer, scene, camera) {
       gtao.updateGtaoMaterial({ radius: 0.28, distanceExponent: 1.6, thickness: 1.2, scale: 1.0, samples: 12 });
       gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 8 });
       comp.addPass(gtao);
-    } else gtao = null;
+      // 얕은 피사계 심도: 남편 눈에 초점, 앞뒤는 살짝 흐리게(입체감)
+      bokeh = new BokehPass(scene, camera, { focus, aperture: 0.0022, maxblur: 0.0045 });
+      comp.addPass(bokeh);
+    } else { gtao = null; bokeh = null; }
     // 전구·창빛만 번지게: 문턱을 높게
     bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.3, 0.5, 6.0); // 문턱 6: 조명 받은 피부는 번지지 않고, 밝게 키운 전구만 번진다
     comp.addPass(bloom);
@@ -65,6 +70,7 @@ export function makePost(renderer, scene, camera) {
   return {
     get mode() { return mode; },
     set(q) { build(q); },
+    setFocus(d) { focus += (d - focus) * 0.2; if (bokeh) bokeh.uniforms.focus.value = focus; },
     resize,
     render(dt) {
       if (!comp) { renderer.render(scene, camera); return; }

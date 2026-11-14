@@ -1,6 +1,7 @@
 // 묶인 사람(기본: 남편). GLB 를 읽고, 두 팔을 머리 위로 묶어 천장 고리에 매단 자세를 매 프레임 IK 로 잡는다.
 // 표정(ARKit 52)·거짓말 버릇·눈 깜빡임·시선·말하는 입·머리 스프링·피부 상태(볼의 붉음·창백·젖음)를 맡는다.
 import * as THREE from 'three';
+import { makeFur } from './fur.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { V3, captureRest, aim, twoBone, setWorldQ, clamp, smooth, damp, lerp } from './rig.js';
@@ -41,9 +42,11 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
   const U = {
     red: { value: [V3(), V3()] }, redK: { value: [0, 0] }, pale: { value: 0 }, wet: { value: 0 }, bruise: { value: 0 },
     wear: { value: new THREE.Vector2(1, 1) }, ageMap: { value: ageMap }, ageK: { value: 0 },
-    hair: { value: blank1(0, 0, 0, 0) }, scalp: { value: blank1(0, 0, 0, 255) }, hairK: { value: 0.5 }, beardK: { value: 0.4 }, hairGrey: { value: 0 }, sweat: { value: 0 },
+    hair: { value: blank1(0, 0, 0, 0) }, cav: { value: blank1(128, 128, 128, 255) }, scalp: { value: blank1(0, 0, 0, 255) }, hairK: { value: 0.5 }, beardK: { value: 0.4 }, hairGrey: { value: 0 }, sweat: { value: 0 },
   };
   // 털·수염·땀 구역 지도(tools/bake_hair.py 로 구움): R 몸 털, G 수염, B 땀 구역, A 수염 그늘
+  // 오목한 곳 그늘(쇄골·겨드랑이·근육 골): tools/bake_cavity.py
+  new THREE.TextureLoader().load(vq('./assets/body_cavity.png'), (t) => { t.flipY = false; t.colorSpace = THREE.NoColorSpace; U.cav.value = t; }, undefined, () => {});
   // 두피 그늘: 머리카락 사이로 맨살이 비치던 곳(앞머리 틈 등)을 머리색으로 깐다
   new THREE.TextureLoader().load(vq('./assets/scalp.png'), (t) => { t.flipY = false; t.colorSpace = THREE.NoColorSpace; U.scalp.value = t; }, undefined, () => {});
   new THREE.TextureLoader().load(vq('./assets/body_hair.png'), (t) => { t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.anisotropy = 8; U.hair.value = t; }, undefined, () => {});
@@ -95,13 +98,13 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
       new THREE.TextureLoader().load(vq('./assets/skin_pore_n.webp'), (t) => { t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping; t.repeat.set(36, 24); t.anisotropy = 8; p.normalMap = t; p.needsUpdate = true; }, undefined, () => {});
       if (envTex) { p.envMap = envTex; p.envMapIntensity = 0.5; }
       p.onBeforeCompile = (sh) => {
-        Object.assign(sh.uniforms, { uRed: U.red, uRedK: U.redK, uPale: U.pale, uWet: U.wet, uBruise: U.bruise, uWear: U.wear, uAgeMap: U.ageMap, uAgeK: U.ageK, uPore: U_PORE, uHair: U.hair, uHairK: U.hairK, uBeardK: U.beardK, uHairGrey: U.hairGrey, uSweat: U.sweat, uScalp: U.scalp });
+        Object.assign(sh.uniforms, { uRed: U.red, uRedK: U.redK, uPale: U.pale, uWet: U.wet, uBruise: U.bruise, uWear: U.wear, uAgeMap: U.ageMap, uAgeK: U.ageK, uPore: U_PORE, uHair: U.hair, uHairK: U.hairK, uBeardK: U.beardK, uHairGrey: U.hairGrey, uSweat: U.sweat, uScalp: U.scalp, uCav: U.cav });
         if (ageMap) sh.defines = { ...(sh.defines || {}), AGE_MAP: '' };
         sh.vertexShader = sh.vertexShader
           .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nattribute vec2 _hide;\nvarying vec2 vHide;')
           .replace('#include <project_vertex>', '#include <project_vertex>\nvWPos = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;\nvHide = _hide;');
         sh.fragmentShader = sh.fragmentShader
-          .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec2 vHide;\nuniform vec2 uWear;\nuniform sampler2D uAgeMap;\nuniform float uAgeK;\nuniform vec3 uRed[2];\nuniform float uRedK[2];\nuniform float uPale;\nuniform float uWet;\nuniform float uBruise;\nuniform sampler2D uPore;\nfloat poreK = 1.0;\nuniform sampler2D uHair;\nuniform float uHairK;\nuniform float uBeardK;\nuniform float uHairGrey;\nuniform float uSweat;\nuniform sampler2D uScalp;\nfloat wetL = 0.0;\nfloat drop = 0.0;\nfloat hairA = 0.0;\nfloat scalpK = 0.0;')
+          .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec2 vHide;\nuniform vec2 uWear;\nuniform sampler2D uAgeMap;\nuniform float uAgeK;\nuniform vec3 uRed[2];\nuniform float uRedK[2];\nuniform float uPale;\nuniform float uWet;\nuniform float uBruise;\nuniform sampler2D uPore;\nfloat poreK = 1.0;\nuniform sampler2D uHair;\nuniform float uHairK;\nuniform float uBeardK;\nuniform float uHairGrey;\nuniform float uSweat;\nuniform sampler2D uScalp;\nuniform sampler2D uCav;\nfloat wetL = 0.0;\nfloat drop = 0.0;\nfloat hairA = 0.0;\nfloat scalpK = 0.0;\nfloat hairH = 0.0;\nvec2 dropG = vec2( 0.0 );\nfloat dropK = 0.0;')
           .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
 	// 옷 밑의 몸은 옷을 입은 동안 그리지 않는다(옷을 벗기면 보인다)
 	if ( ( vHide.x > 0.5 && uWear.x > 0.5 ) || ( vHide.y > 0.5 && uWear.y > 0.5 ) ) discard;`)
@@ -110,9 +113,11 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
 	diffuseColor.rgb = mix( diffuseColor.rgb, texture2D( uAgeMap, vMapUv ).rgb * diffuse, uAgeK );
 	#endif
 	{ float pl = clamp( 1.0 + ( dot( texture2D( uPore, vMapUv * vec2( 36.0, 24.0 ) ).rgb, vec3( 0.3, 0.59, 0.11 ) ) / 0.735 - 1.0 ) * 6.0, 0.6, 1.4 ); poreK = pl; diffuseColor.rgb *= mix( 1.0, pl, 0.5 ); }
+	diffuseColor.rgb *= clamp( 1.0 + ( texture2D( uCav, vMapUv ).r - 0.5 ) * 0.7, 0.68, 1.08 ); // 근육 사이 골·쇄골 아래가 깊어 보이게
 	// 털·수염(나이에 따라 세기), 수염 그늘, 땀
 	{ vec4 hm = texture2D( uHair, vMapUv );
 	  hairA = clamp( hm.r * uHairK + hm.g * uBeardK, 0.0, 1.0 );
+	  hairH = hairA;
 	  vec3 hairC = mix( vec3( 0.032, 0.026, 0.022 ), vec3( 0.42, 0.40, 0.38 ), uHairGrey );
 	  diffuseColor.rgb *= 1.0 - hm.a * uBeardK * 0.18;
 	  diffuseColor.rgb = mix( diffuseColor.rgb, hairC, hairA * 0.88 );
@@ -123,14 +128,31 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
 	  float rn = fract( sin( dot( ci, vec2( 127.1, 311.7 ) ) ) * 43758.5453 );
 	  vec2 off = vec2( fract( rn * 17.3 ), fract( rn * 31.7 ) ) - 0.5;
 	  float rad = 0.16 + 0.18 * fract( rn * 7.1 );
-	  drop = step( rn, wetL * 0.6 ) * smoothstep( rad, rad * 0.45, length( cf - off * 0.45 ) );
+	  vec2 dv = cf - off * 0.45; float dl = max( length( dv ), 1e-4 );
+	  float on = step( rn, wetL * 0.6 );
+	  drop = on * smoothstep( rad, rad * 0.45, dl );
+	  // 반구 모양 방울: 가장자리로 갈수록 기울기가 커진다. 멀리서는(화소보다 작으면) 끈다
+	  dropG = on * ( dl < rad ? dv / dl * ( dl / rad ) / sqrt( max( 1.0 - ( dl / rad ) * ( dl / rad ), 0.05 ) ) : vec2( 0.0 ) );
+	  dropK = 0.9 * ( 1.0 - smoothstep( 0.25, 0.6, length( fwidth( dc ) ) ) );
 	  diffuseColor.rgb *= 1.0 - wetL * 0.07; }
 	float lum = dot( diffuseColor.rgb, vec3( 0.3, 0.59, 0.11 ) );
 	diffuseColor.rgb = mix( diffuseColor.rgb, vec3( lum ) * vec3( 0.96, 0.99, 1.05 ) * 1.04, uPale * 0.6 );
 	float red = 0.0;
 	for ( int i = 0; i < 2; i ++ ) red += uRedK[ i ] * ( 1.0 - smoothstep( 0.012, 0.06, length( vWPos - uRed[ i ] ) ) );
 	diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * vec3( 1.22, 0.6, 0.56 ), clamp( red, 0.0, 1.0 ) * 0.7 );`)
-          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix( roughnessFactor * ( 1.12 - 0.12 * poreK ), 0.24, wetL );\nroughnessFactor = mix( roughnessFactor, 0.05, drop );\nroughnessFactor = mix( roughnessFactor, 0.8, hairA );\nroughnessFactor = mix( roughnessFactor, 1.0, scalpK );')
+          .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+	// 땀방울: 둥근 높이를 화면 기울기로 바꿔 법선을 기울인다 → 방울마다 볼록한 하이라이트
+	// 땀방울 법선: 방울 모양의 기울기를 해석적으로 구해 UV 접평면으로 옮긴다(화면 미분 블록 없이)
+	if ( dropK > 0.0 ) {
+	  vec3 q0 = dFdx( - vViewPosition ), q1 = dFdy( - vViewPosition );
+	  vec2 st0 = dFdx( vMapUv ), st1 = dFdy( vMapUv );
+	  vec3 q1perp = cross( q1, normal ), q0perp = cross( normal, q0 );
+	  vec3 T = q1perp * st0.x + q0perp * st1.x, B = q1perp * st0.y + q0perp * st1.y;
+	  float det = max( dot( T, T ), dot( B, B ) );
+	  float sc = ( det == 0.0 ) ? 0.0 : inversesqrt( det );
+	  normal = normalize( normal - ( dropG.x * T * sc + dropG.y * B * sc ) * dropK );
+	}`)
+          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix( roughnessFactor * ( 1.12 - 0.12 * poreK ), 0.24, wetL );\nroughnessFactor = mix( roughnessFactor, 0.05, drop * step( 0.001, dropK ) );\nroughnessFactor = mix( roughnessFactor, 0.8, hairA );\nroughnessFactor = mix( roughnessFactor, 1.0, scalpK );')
           .replace('#include <lights_physical_fragment>', '#include <lights_physical_fragment>\n#ifdef USE_SHEEN\nmaterial.sheenColor *= 1.0 - scalpK;\n#endif\nmaterial.specularColor *= 1.0 - 0.85 * scalpK;')
           .replace('#include <lights_physical_pars_fragment>', skinChunk());
       };
@@ -388,6 +410,8 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
   // ---------- 피부 상태
   const SK = { red: [0, 0], redGoal: [0, 0], pale: 0, paleGoal: 0, wet: 0, sweat: 0, sweatGoal: 0 };
   H.skinState = SK; H.U = U;
+  // 입체 털(셸): 몸 털·수염·두피 잔머리
+  if (skin) H.fur = makeFur(skin, U, vq);
   H.slapMark = (side, k = 0.6) => { const i = side === 'L' ? 0 : 1; SK.redGoal[i] = clamp(SK.redGoal[i] + k, 0, 1); };
   H.setPale = (k) => { SK.paleGoal = clamp(k); };
   H.wet = (k = 1) => { SK.wet = Math.max(SK.wet, k); };

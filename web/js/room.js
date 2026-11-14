@@ -148,7 +148,7 @@ export function makeRoom(scene) {
   const KEY = 20; R.keyBase = KEY;
   const key = new THREE.SpotLight(0xffd6a0, KEY, 7, 0.95, 0.65, 1.6);
   key.position.set(0.6, H - 0.6, -0.1); key.target.position.set(0, 1.3, 0.2);
-  key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 8; key.shadow.blurSamples = 16; key.shadow.camera.near = 0.1;
+  key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 18; key.shadow.blurSamples = 24; key.shadow.camera.near = 0.1;
   R.group.add(key, key.target); R.lights.key = key; R.bulb = bulb;
   const fill = new THREE.PointLight(0xffb880, 2.2, 6, 1.8); fill.position.set(-0.4, 1.7, 1.9); R.group.add(fill); R.lights.fill = fill;
   const amb = new THREE.HemisphereLight(0x8a7a6a, 0x1a120c, 0.25); R.group.add(amb); R.lights.amb = amb;
