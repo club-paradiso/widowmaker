@@ -9,6 +9,7 @@ import { t, line, lines, loc, store } from './i18n.js';
 import { loadHusband } from './husband.js';
 import { loadArms } from './arms.js';
 import { makeRoom } from './room.js';
+import { makePost, defaultQuality } from './post.js';
 import { makeClips } from './clips.js';
 import * as P from './props.js';
 import * as AU from './audio.js';
@@ -22,6 +23,7 @@ const MODE = I18N.pickMode();
 const story = await I18N.load(undefined, MODE);
 const faces = await fetch(vq('./data/faces.json')).then((r) => r.json());
 const SAVE_KEY = 'wm_save';
+const START_MIN = 22 * 60; // 게임 시작 시각(22:00)
 
 // ---------------------------------------------------------------- 3D
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: q.has('shot') });
@@ -30,7 +32,7 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.NeutralToneMapping;
 renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap; // 화질이 정해진 뒤 아래에서 다시 고른다
 document.body.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x070605);
@@ -39,13 +41,50 @@ scene.environment = envTex;
 scene.environmentIntensity = 0.18;
 const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.03, 40);
 const fitFov = (aspect) => (aspect >= 1 ? 48 : Math.min(48 * 1.45, (2 * Math.atan(Math.tan((48 * Math.PI) / 360) / aspect) * 180) / Math.PI));
-addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.fov = fitFov(camera.aspect); camera.updateProjectionMatrix(); layoutSub(); });
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); post.resize(); camera.aspect = innerWidth / innerHeight; camera.fov = fitFov(camera.aspect); camera.updateProjectionMatrix(); layoutSub(); });
 camera.fov = fitFov(innerWidth / innerHeight); camera.updateProjectionMatrix();
+// 카메라에 붙은 약한 보조광(영화 촬영의 아이라이트): 위에서 내리꽂는 조명에 가려진 얼굴을 살짝 살리고 눈에 반사점을 만든다
+const eyeLight = new THREE.PointLight(0xffe9d8, 0.9, 3.5, 2);
+eyeLight.position.set(0.05, 0.08, 0);
+camera.add(eyeLight); scene.add(camera);
+// 화면 처리(화질): ?gfx=high|low|off 가 우선, 다음은 저장값, 없으면 기기에 맞춰
+const post = makePost(renderer, scene, camera);
+const GFX = ['high', 'low', 'off'];
+const gfx0 = q.get('gfx') || store.get('wm_gfx') || defaultQuality();
+post.set(GFX.includes(gfx0) ? gfx0 : 'high');
+// 높음: 부드러운 그림자 경계(든 팔이 가슴에 드리우는 그림자가 칼로 자른 듯 보이지 않게). 가볍게·끄기는 예전 방식(첫 그리기 전이라 재질을 다시 만들 필요 없음)
+renderer.shadowMap.type = post.mode === 'high' ? THREE.VSMShadowMap : THREE.PCFShadowMap;
+// 사람이 화질을 고르지 않았으면, 실제로 버벅일 때 한 단계씩 낮춘다(평균 프레임이 24fps 아래로 2초 넘게)
+const gfxAuto = !q.get('gfx') && !store.get('wm_gfx');
+const perf = { t: 0, n: 0 };
+const _fv = new THREE.Vector3();
+function guardPerf(dt) {
+  if (!gfxAuto || post.mode === 'off' || document.hidden) return;
+  perf.t += dt; perf.n++;
+  if (perf.t < 2) return;
+  const avg = perf.t / perf.n; perf.t = 0; perf.n = 0;
+  if (avg > 1 / 24) post.set(post.mode === 'high' ? 'low' : 'off');
+}
 
 THREE.DefaultLoadingManager.onProgress = (url, n, total) => { $('go').textContent = `${t('loading')} ${Math.round((n / Math.max(1, total)) * 100)}%`; };
 const room = makeRoom(scene);
+// 반사 탐침: 방이 다 그려진 뒤 방 안에서 사방을 찍어 주변광·반사로 쓴다(남편·손은 빼고).
+// 기본 스튜디오 조명(RoomEnvironment) 대신 실제 방의 따뜻한 빛과 어두운 구석이 피부·눈·바닥에 비친다
+function captureProbe() {
+  if (!H) return;
+  const hid = [H.root, A && (A.root || A.group)].filter(Boolean).map((o) => [o, o.visible]);
+  hid.forEach(([o]) => (o.visible = false));
+  const gen = new THREE.PMREMGenerator(renderer);
+  const probe = gen.fromScene(scene, 0.03, 0.05, 30, { size: 256, position: new THREE.Vector3(0, 1.45, 0.4) }).texture;
+  gen.dispose();
+  hid.forEach(([o, v]) => (o.visible = v));
+  scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []; for (const m of ms) if ('envMap' in m && (m.envMap === envTex || m.envMap === probeTex)) { m.userData.envI0 ??= m.envMapIntensity; m.envMapIntensity = m.userData.envI0 * 0.5; m.envMap = probe; m.needsUpdate = true; } }); // 방 빛은 이미 직접광으로도 들어오므로 반사는 절반만
+  if (probeTex) probeTex.dispose();
+  probeTex = probe; scene.environment = probe; scene.environmentIntensity = 0.16;
+}
+let probeTex = null;
 const [H, A] = await Promise.all([
-  loadHusband(scene, { url: './assets/husband.glb', envTex, faces, ageTex: './assets/skin_mid_m.webp' }),
+  loadHusband(scene, { url: './assets/husband.glb', envTex, faces, ageTex: './assets/skin_mid_m_face.webp' }),
   loadArms(scene, camera, { url: './assets/wife.glb', envTex, ring: true }),
 ]);
 H.setExpr('nervous');
@@ -55,7 +94,7 @@ const fx = {
   flash: (k) => { if (CALM) return; const f = $('flash'); f.style.transition = 'none'; f.style.opacity = k; requestAnimationFrame(() => { f.style.transition = 'opacity .35s'; f.style.opacity = 0; }); },
   shake: (k) => { if (!CALM) shakeAmp = Math.max(shakeAmp, k); },
   tick: (fn) => fxTicks.push(fn),
-  lamp: (k) => { room.lights.key.intensity = 26 * k; },
+  lamp: (k) => { room.lights.key.intensity = room.keyBase * k; },
 };
 // 소품 상태
 let blindObj = null, toolboxObj = null, recorderObj = null;
@@ -137,6 +176,8 @@ function staticTexts() {
 staticTexts();
 document.querySelectorAll('#langRow button').forEach((b) => (b.onclick = () => { store.set('wm_lang', b.dataset.lang); const u = new URL(location.href); u.searchParams.set('lang', b.dataset.lang); location.href = u.toString(); }));
 $('hname').value = store.get('wm_name') || '';
+{ const box = $('gfxBox'); const paint = () => box.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.q === post.mode)));
+  box.querySelectorAll('button').forEach((b) => (b.onclick = () => { post.set(b.dataset.q); store.set('wm_gfx', b.dataset.q); paint(); })); paint(); }
 { const a = $('age'); a.value = store.get('wm_age') || 32; const show = () => { $('ageOut').textContent = t('ageUnit', { n: a.value }); H.setAge(+a.value); }; a.oninput = show; show(); }
 { const v = JSON.parse(store.get('wm_vol') || '{}'); for (const k of ['se', 'amb', 'bgm']) { const val = v[k] ?? AU.volumes()[k]; $(`vol_${k}`).value = Math.round(val * 100); AU.setVolume(k, val); $(`vol_${k}`).oninput = (e) => { AU.setVolume(k, e.target.value / 100); store.set('wm_vol', JSON.stringify(AU.volumes())); }; } }
 
@@ -162,6 +203,8 @@ function hud() {
   H.state.sag = Math.min(1, Math.max(0, (70 - G.hp) / 70) + (G.strain > 80 ? 0.2 : 0));
   H.state.tremble = Math.max(0, (G.strain - 40) / 60);
   H.setPale(Math.max(0, (75 - G.hp) / 90));
+  // 땀: 팔이 버티는 부담·고통·공포·긴장과 흐른 시간이 쌓일수록
+  H.setSweat(Math.min(1, 0.12 + G.strain / 140 + G.pain / 180 + G.fear / 260 + G.stress / 300 + Math.max(0, (G.min - START_MIN) / 900)));
   H.face.mouthShut = false;
   idleFace();
 }
@@ -317,7 +360,7 @@ async function playEvents(id, evs) {
 async function leaveFlow() {
   const f = $('fade'); f.textContent = ''; f.style.opacity = 1; room.lights.key.intensity = 0;
   await wait(1.6);
-  room.lights.key.intensity = 26; f.style.opacity = 0;
+  room.lights.key.intensity = room.keyBase; f.style.opacity = 0;
   await wait(0.8);
 }
 
@@ -327,6 +370,9 @@ async function phoneFlow() {
   const ui = $('phoneui'), body = $('phonebody');
   ui.className = 'on';
   const opened = new Set();
+  // 갤러리 사진(사용자 제작 art/user/15~18): 목록은 작은 사진, 열면 큰 사진
+  const thumb = (img) => (img ? `<img class="th" src="./assets/${img}.webp" alt="" loading="lazy">` : '');
+  const photo = (img) => (img ? `<img class="ph" src="./assets/${img}.webp" alt="">` : '');
   let pending = []; // 폰 안의 행동이 아침·결말을 넘기면 폰을 닫고 처리한다
   const sub = (id, arg) => { ACTS.push([id, arg]); const evs = act(G, id, arg); saveGame(); pending.push(...evs.filter((e) => e.t === 'morning' || e.t === 'end')); return pending.length > 0; };
   await new Promise((done) => {
@@ -338,13 +384,13 @@ async function phoneFlow() {
     const openApp = async (app) => {
       if (!opened.has(app)) { opened.add(app); if (sub('look', app)) return done(); hud(); }
       const rows = appRows(G, app);
-      body.innerHTML = `<div class="bar"><button class="back">${t('phone_back')}</button><span>${loc(story.apps[app])}</span><span></span></div><div class="rows">${rows.length ? rows.map((r, i) => r.ev ? `<button data-i="${i}" class="${r.ev.found ? 'took' : ''}">${loc(r.ev.name)}<small>${loc(r.ev.desc).slice(0, 26)}…</small></button>` : `<button data-i="${i}">${loc(r.t)}<small>${loc(r.d)}</small></button>`).join('') : `<div class="detail">${t('phone_nothing')}</div>`}</div>`;
+      body.innerHTML = `<div class="bar"><button class="back">${t('phone_back')}</button><span>${loc(story.apps[app])}</span><span></span></div><div class="rows">${rows.length ? rows.map((r, i) => r.ev ? `<button data-i="${i}" class="${r.ev.found ? 'took' : ''}${r.ev.img ? ' hasimg' : ''}">${thumb(r.ev.img)}${loc(r.ev.name)}<small>${loc(r.ev.desc).slice(0, 26)}…</small></button>` : `<button data-i="${i}" class="${r.img ? 'hasimg' : ''}">${thumb(r.img)}${loc(r.t)}<small>${loc(r.d)}</small></button>`).join('') : `<div class="detail">${t('phone_nothing')}</div>`}</div>`;
       body.querySelector('.back').onclick = home;
       body.querySelectorAll('[data-i]').forEach((b) => (b.onclick = () => openRow(app, rows[+b.dataset.i])));
     };
     const openRow = (app, r) => {
       const isEv = !!r.ev;
-      body.innerHTML = `<div class="bar"><button class="back">${t('phone_back')}</button><span>${loc(story.apps[app])}</span><span></span></div><div class="detail"><h4>${loc(isEv ? r.ev.name : r.t)}</h4>${app === 'messenger' ? `<div class="msg">${loc(isEv ? r.ev.desc : r.d)}</div>` : loc(isEv ? r.ev.desc : r.d)}</div>${isEv ? `<div class="act"><button class="take" ${r.ev.found ? 'disabled' : ''}>${r.ev.found ? t('phone_took') : t('phone_take')}</button></div>` : ''}`;
+      body.innerHTML = `<div class="bar"><button class="back">${t('phone_back')}</button><span>${loc(story.apps[app])}</span><span></span></div><div class="detail"><h4>${loc(isEv ? r.ev.name : r.t)}</h4>${photo(isEv ? r.ev.img : r.img)}${app === 'messenger' ? `<div class="msg">${loc(isEv ? r.ev.desc : r.d)}</div>` : loc(isEv ? r.ev.desc : r.d)}</div>${isEv ? `<div class="act"><button class="take" ${r.ev.found ? 'disabled' : ''}>${r.ev.found ? t('phone_took') : t('phone_take')}</button></div>` : ''}`;
       body.querySelector('.back').onclick = () => openApp(app);
       const tk = body.querySelector('.take');
       if (tk && !r.ev.found) tk.onclick = () => { const stop = sub('take', r.ev.id); notes(); AU.SFX.click(); if (stop) return done(); openRow(app, { ev: G.evidence[r.ev.id] }); };
@@ -386,17 +432,27 @@ async function verdictFlow(forced = false) {
   if (r.epilogue) await epilogue(r.epilogue);
   result(r);
 }
+// 결말 그림(사용자 제작 art/user/24~30). 없는 결말은 3D 장면 그대로
+const END_CARDS = { dead: 'end_dead', police: 'end_police', police_colleague: 'end_police_colleague', escaped: 'end_escaped', warm: 'end_warm', cold: 'end_cold', phone: 'end_phone', apart: 'end_apart' };
+function endCard(kind) {
+  const el = $('endcard');
+  if (!kind || !END_CARDS[kind]) { el.classList.remove('on'); return; }
+  el.style.backgroundImage = `url(./assets/${END_CARDS[kind]}.webp)`;
+  requestAnimationFrame(() => el.classList.add('on'));
+}
 async function endFlow(kind) {
   ended = true; setBusy(true); clearSave();
   if (kind === 'dead') { H.state.dead = true; AU.bgm(null); await wait(1.2); }
   if (kind === 'escaped') { H.root.visible = false; room.setRopeVisible(false); AU.SFX.thud(); }
   const ls = lines(`end_${kind}`);
   for (let i = 0; i < ls.length; i++) {
-    if (kind === 'dead' && i === 1) AU.SFX.doorbell();
-    if (kind === 'police' || kind === 'police_colleague') { if (i === 0) { AU.SFX.knock(); AU.SFX.siren(); } }
+    if (kind === 'dead' && i === 1) { AU.SFX.doorbell(); endCard(kind); }
+    if (kind === 'escaped' && i === 0) endCard(kind);
+    if (kind === 'police' || kind === 'police_colleague') { if (i === 0) { AU.SFX.knock(); AU.SFX.siren(); endCard(kind); } }
     await show(kind === 'police' ? 'p' : 'n', ls[i], { hold: 2.6 });
   }
   const f = $('fade'); f.textContent = ''; f.style.opacity = 1; await wait(1.4);
+  endCard(null);
   result(verdict(G, null));
 }
 async function epilogue(kind) {
@@ -405,7 +461,7 @@ async function epilogue(kind) {
   await wait(1.2);
   let skip = false; $('skip').onclick = () => { skip = true; if (skipWait) skipWait(); };
   // 장면 꾸미기: 아침 빛, 묶인 사람·줄·소품은 치운다
-  room.setMorning(true); AU.setAmbient('morning'); AU.bgm(kind === 'apart' ? 'lonely' : 'morning');
+  room.setMorning(true); setTimeout(captureProbe, 300); AU.setAmbient('morning'); AU.bgm(kind === 'apart' ? 'lonely' : 'morning');
   H.root.visible = false; room.setRopeVisible(false); A.root.visible = false;
   for (const o of [toolboxObj, recorderObj]) if (o) o.visible = false;
   const extras = [];
@@ -422,10 +478,12 @@ async function epilogue(kind) {
     setView('epiWin', 50);
   }
   await wait(0.2);
+  endCard(kind);
   f.style.opacity = 0;
   const ls = lines(`epi_${kind}`);
   for (const l of ls) { if (skip) break; const m = /^([hw]):(.*)$/s.exec(l); await show(m ? m[1] : 'n', m ? m[2] : l, { hold: 3.2 }); }
   f.style.opacity = 1; await wait(1.2);
+  endCard(null);
   document.body.classList.remove('cine');
   clearSub();
 }
@@ -524,14 +582,17 @@ function tick(dt) {
   A.update(dt);
   for (let i = fxTicks.length - 1; i >= 0; i--) if (fxTicks[i](dt) === false) fxTicks.splice(i, 1);
   if (recorderObj && recorderObj.visible) recorderObj.userData.dot.visible = Math.floor(performance.now() / 600) % 2 === 0;
-  renderer.render(scene, camera);
+  if (H && H.root.visible) post.setFocus(camera.position.distanceTo(H.point('eyes', _fv)));
+  post.render(dt);
 }
 if (q.has('step')) window.__step = (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++) tick(dt); };
-else renderer.setAnimationLoop(() => { const now = performance.now(); const dt = Math.min(0.05, (now - last) / 1000); last = now; tick(dt); });
+else renderer.setAnimationLoop(() => { const now = performance.now(); const raw = (now - last) / 1000; const dt = Math.min(0.05, raw); last = now; tick(dt); if (raw < 0.5) guardPerf(raw); });
 
 // 확인용
 window.__act = (id, arg) => perform(id, arg);
 window.__G = () => G;
+window.__H = () => H;
+window.__R = () => renderer;
 window.__view = (v) => setView(v, 50);
 window.__clip = (name, ...a) => runClip(C[name](...a));
 window.__begin = begin;
@@ -539,4 +600,7 @@ window.__epi = (k) => epilogue(k);
 window.__dbg = () => ({ clip: !!A.clip, t: A.t, view, cam: camera.position.toArray().map((x) => +x.toFixed(2)), hr: A.bones.hand_r.getWorldPosition(new THREE.Vector3()).toArray().map((x) => +x.toFixed(2)), cheek: H.point("cheekL").toArray().map((x) => +x.toFixed(2)), eyes: H.point("eyes").toArray().map((x) => +x.toFixed(2)), vis: A.root.visible, sh: A.bones.upperarm_r.getWorldPosition(new THREE.Vector3()).toArray().map((x) => +x.toFixed(2)), el: A.bones.lowerarm_r.getWorldPosition(new THREE.Vector3()).toArray().map((x) => +x.toFixed(2)), root: A.root.position.toArray().map((x) => +x.toFixed(2)) });
 $('go').disabled = false; $('go').textContent = t('start');
 if (q.has('step')) window.__step(2);
+// 방 사진 질감이 다 읽힌 뒤 반사 탐침을 찍는다(아침 장면이 되면 다시)
+THREE.DefaultLoadingManager.onLoad = () => captureProbe();
+setTimeout(captureProbe, 2500);
 window.__ready = true;

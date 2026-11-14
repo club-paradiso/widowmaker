@@ -270,7 +270,8 @@
      "en": "A selfie, his arm around her. Dated after the wedding."
     },
     "strength": 3,
-    "app": "gallery"
+    "app": "gallery",
+    "img": "ph_selfie"
    },
    {
     "name": {
@@ -517,7 +518,8 @@
     "d": {
      "ko": "점심 메뉴 사진 3장",
      "en": "3 photos of lunch"
-    }
+    },
+    "img": "ph_lunch"
    },
    {
     "t": {
@@ -527,7 +529,8 @@
     "d": {
      "ko": "회의실 화이트보드",
      "en": "Whiteboard from a meeting"
-    }
+    },
+    "img": "ph_board"
    },
    {
     "t": {
@@ -537,7 +540,8 @@
     "d": {
      "ko": "우리 둘이 바다에서",
      "en": "The two of us at the beach"
-    }
+    },
+    "img": "ph_beach"
    }
   ],
   "maps": [
