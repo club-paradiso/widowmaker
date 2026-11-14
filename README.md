@@ -34,6 +34,7 @@ URL 옵션: `?lang=ko|en` `?seed=123`(같은 진상) `?fast`(10배속) `?step`(�
 | `web/js/i18n.js`, `web/data/*.json` | 한/영 문구와 대본 |
 | `tools/build_human.py` | MakeHuman CC0 자산 → GLB(Blender 없이). 나이·근육 모프 포함. `build_models.sh` → `optimize.sh` |
 | `web/js/fur.js` | 입체 털(셸 렌더링): 수염·두피 잔머리를 16겹 껍질로 세운다 |
+| `tools/bake_face.py` | 정면·양옆 얼굴 사진을 머리 UV 에 투영해 얼굴 피부 질감을 굽는다(MediaPipe 기준점 + 메시 기준점) |
 | `tools/bake_cavity.py` | 몸 곡률로 오목한 곳 그늘 지도(`body_cavity.png`)를 굽는다 |
 | `tools/bake_hair.py` | 몸 UV 에 털·수염 가닥과 땀 구역을 코드로 그려 `body_hair.png` 를 굽는다(나이·긴장에 따라 런타임에서 세기 조절) |
 

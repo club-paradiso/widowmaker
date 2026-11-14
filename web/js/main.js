@@ -84,7 +84,7 @@ function captureProbe() {
 }
 let probeTex = null;
 const [H, A] = await Promise.all([
-  loadHusband(scene, { url: './assets/husband.glb', envTex, faces, ageTex: './assets/skin_mid_m.webp' }),
+  loadHusband(scene, { url: './assets/husband.glb', envTex, faces, ageTex: './assets/skin_mid_m_face.webp' }),
   loadArms(scene, camera, { url: './assets/wife.glb', envTex, ring: true }),
 ]);
 H.setExpr('nervous');

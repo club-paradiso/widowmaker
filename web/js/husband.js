@@ -71,6 +71,8 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
       if (/bob|long|ponytail|braid/.test(name)) hp.color.setRGB(0.2, 0.15, 0.12);
       o.material = hp;
       hair.push(o);
+    } else if (/^eyebrows\./.test(name)) {
+      o.visible = false; // 눈썹은 얼굴 사진에 이미 있다(겹치면 두 겹)
     } else if (/^(eyebrows|eyelashes)\./.test(name)) {
       m.transparent = true; m.depthWrite = false; m.alphaTest = 0.05; o.renderOrder = 2; o.castShadow = false;
     } else if (/^eyes\./.test(name)) {
@@ -97,6 +99,8 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
         sheenColor: new THREE.Color(1.0, 0.8, 0.72), color: new THREE.Color(0.97, 0.92, 0.9),
       });
       p.name = name;
+      // 얼굴 피부: 사용자 제공 정면·양옆 사진(art/user/face_*.png)을 머리 UV 에 투영해 구운 4K 질감(tools/bake_face.py)
+      new THREE.TextureLoader().load(vq('./assets/husband_skin.webp'), (t) => { t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; p.map = t; p.needsUpdate = true; }, undefined, () => {});
       // 모공 요철(사용자 제공 art/user/03 에서 만든 노멀맵). 몸 UV 를 촘촘히 반복한다
       p.normalScale = new THREE.Vector2(0.65, 0.65);
       new THREE.TextureLoader().load(vq('./assets/skin_pore_n.webp'), (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(36, 24); t.anisotropy = 8; p.normalMap = t; p.needsUpdate = true; }, undefined, () => {});
@@ -484,7 +488,7 @@ export async function loadHusband(scene, { url = './assets/husband.glb', envTex 
     // 나이에 따라: 20대는 매끈하고 마른 편, 40대로 갈수록 털·수염이 짙어지고 몸이 두꺼워진다(설계 판단)
     const t = Math.min(1, Math.max(0, (age - 20) / 25));
     U.hairK.value = 0.12 + 0.88 * t;
-    U.beardK.value = 0.18 + 0.72 * t;
+    U.beardK.value = Math.max(0, (age - 30) / 15) * 0.85; // 기본 수염(2~3일)은 얼굴 사진에 있다 → 30대 중반부터 그 위로 짙어진다
     U.hairGrey.value = Math.max(0, (age - 40) / 20) * 0.45;
     AGE.muscle = -0.35 + 1.1 * t;
   };
